@@ -3,6 +3,8 @@ package network
 import (
 	"fmt"
 	"os"
+	"wzrds/common/netmsg"
+	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/utils"
 
 	"github.com/codecat/go-enet"
@@ -10,6 +12,7 @@ import (
 
 type NetworkServer struct {
 	enetServerHost enet.Host
+	enetPeers      map[uint]enet.Peer
 }
 
 func NewNetworkServer() *NetworkServer {
@@ -23,6 +26,8 @@ func NewNetworkServer() *NetworkServer {
 		os.Exit(1)
 	}
 
+	ns.enetPeers = make(map[uint]enet.Peer)
+
 	return ns
 }
 
@@ -31,25 +36,53 @@ func (ns *NetworkServer) CheckForEvents() interface{} {
 
 	switch event.GetType() {
 	case enet.EventConnect:
-		id := event.GetPeer().GetConnectId()
+		peer := event.GetPeer()
+		id := peer.GetConnectId()
+		peer.SetData(utils.UintToByteArray(id))
+		ns.enetPeers[id] = peer
 		fmt.Println("connected id:", id)
-		event.GetPeer().SetData(utils.UintToByteArray(id))
 
 	case enet.EventDisconnect:
-		id := utils.ByteArrayToUint(event.GetPeer().GetData())
+		peer := event.GetPeer()
+		id := utils.ByteArrayToUint(peer.GetData())
+		peer.SetData(nil)
 		fmt.Println("disconnected id:", id)
 
 	case enet.EventReceive:
 		fmt.Println("recieved from", event.GetPeer().GetConnectId())
 		packet := event.GetPacket()
-		fmt.Println("\tdata:", packet.GetData())
+		bytes := packet.GetData()
 		packet.Destroy()
+		id := bytes[0]
+		bytes = bytes[1:]
+		switch id {
+		case byte(msgfromclient.MsgTypeMoveInput):
+			s := netmsg.GetStructFromBytes[msgfromclient.MoveInput](bytes)
+			return s
+		}
 	}
 
 	return nil
 }
 
-func (nc *NetworkServer) Stop() {
-	nc.enetServerHost.Destroy()
+func (ns *NetworkServer) Stop() {
+	fmt.Println("network server stop")
+	ns.enetServerHost.Destroy()
 	enet.Deinitialize()
+}
+
+func (ns *NetworkServer) SendTo(id uint, msg []byte, reliable bool) {
+	flag := enet.PacketFlagReliable
+	if !reliable {
+		flag = enet.PacketFlagUnsequenced
+	}
+	ns.enetPeers[id].SendBytes(msg, 0, flag)
+}
+
+func (ns *NetworkServer) SendToAll(msg []byte, reliable bool) {
+	flag := enet.PacketFlagReliable
+	if !reliable {
+		flag = enet.PacketFlagUnsequenced
+	}
+	ns.enetServerHost.BroadcastBytes(msg, 0, flag)
 }

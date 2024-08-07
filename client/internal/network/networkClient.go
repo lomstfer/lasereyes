@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"wzrds/common"
+	"wzrds/common/netmsg"
+	"wzrds/common/netmsg/msgfromserver"
 
 	"github.com/codecat/go-enet"
 )
@@ -44,16 +45,30 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 		nc.enetServerPeer.SendString("hello", 0, enet.PacketFlagReliable)
 	case enet.EventDisconnect:
 		fmt.Println("disconnected", event.GetPeer())
-		return common.ServerDisconnectedClient{}
+		return msgfromserver.DisconnectSelf{}
 	case enet.EventReceive:
-		fmt.Println("recieved")
 		packet := event.GetPacket()
-		fmt.Println("\tdata:", packet.GetData())
+		bytes := packet.GetData()
 		packet.Destroy()
-		return common.ClientConnectionInfo{Name: "Peter Griffin"}
+		id := bytes[0]
+		bytes = bytes[1:]
+		switch id {
+		case byte(msgfromserver.MsgTypeDisconnectedClient):
+			s := netmsg.GetStructFromBytes[msgfromserver.DisconnectedClient](bytes)
+			return s
+		}
+		return nil
 	}
 
 	return nil
+}
+
+func (nc *NetworkClient) SendToServer(msg []byte, reliable bool) {
+	flag := enet.PacketFlagReliable
+	if !reliable {
+		flag = enet.PacketFlagUnsequenced
+	}
+	nc.enetServerPeer.SendBytes(msg, 0, flag)
 }
 
 func (nc *NetworkClient) StartDisconnect() {

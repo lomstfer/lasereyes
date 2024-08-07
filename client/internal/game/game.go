@@ -11,6 +11,10 @@ import (
 	"wzrds/client/internal/network"
 	"wzrds/client/pkg/utils"
 	"wzrds/common"
+	"wzrds/common/netmsg"
+	"wzrds/common/netmsg/msgfromclient"
+	"wzrds/common/netmsg/msgfromserver"
+	"wzrds/common/pkg/vec2"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
@@ -30,6 +34,10 @@ type Game struct {
 	startedClosingProcedure bool
 	timeOfCloseInput        time.Time
 	cleanClose              bool
+
+	getInputCallback        *common.FixedCallback
+	sendInputCallback       *common.FixedCallback
+	accumulatedPlayerInputs []common.PlayerInput
 }
 
 func NewGame(assetFS embed.FS) *Game {
@@ -41,6 +49,11 @@ func NewGame(assetFS embed.FS) *Game {
 	game := &Game{}
 	game.startTime = time.Now()
 	game.lastUpdateTime = time.Now()
+
+	game.getInputCallback = common.NewFixedCallback(1.0 / 60.0)
+
+	game.sendInputCallback = common.NewFixedCallback(1.0 / 30.0)
+	game.accumulatedPlayerInputs = make([]common.PlayerInput, 0)
 
 	game.netClient = network.NewNetworkClient()
 
@@ -60,6 +73,7 @@ func (g *Game) loadAssets(assetFS embed.FS) {
 	g.finishedAssetLoading = true
 }
 
+// called 60 times per second
 func (g *Game) Update() error {
 	if ebiten.IsWindowBeingClosed() && !g.startedClosingProcedure {
 		g.OnCloseInput()
@@ -83,14 +97,40 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	netMessage := g.netClient.CheckForEvents()
 	switch /* msg :=  */ netMessage.(type) {
-	case common.ServerDisconnectedClient:
+	case msgfromserver.DisconnectSelf:
 		g.cleanClose = true
 	}
 
 	g.time = time.Since(g.startTime).Seconds()
 	timeNow := time.Now()
-	// dt := timeNow.Sub(game.lastUpdateTime).Seconds()
+	// dt := timeNow.Sub(g.lastUpdateTime).Seconds()
 	g.lastUpdateTime = timeNow
+
+	g.getInputCallback.Update(func() {
+		inputVec := vec2.Vec2{}
+		if ebiten.IsKeyPressed(ebiten.KeyW) {
+			inputVec.Y -= 1
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyS) {
+			inputVec.Y += 1
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyA) {
+			inputVec.X -= 1
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyD) {
+			inputVec.X += 1
+		}
+		fmt.Println(inputVec)
+		input := common.PlayerInput{Up: inputVec.Y == -1, Down: inputVec.Y == 1, Left: inputVec.X == -1, Right: inputVec.X == 1}
+		g.accumulatedPlayerInputs = append(g.accumulatedPlayerInputs, input)
+	})
+
+	g.sendInputCallback.Update(func() {
+		packetStruct := msgfromclient.MoveInput{Input: g.accumulatedPlayerInputs}
+		g.accumulatedPlayerInputs = make([]common.PlayerInput, 0)
+		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeMoveInput), packetStruct)
+		g.netClient.SendToServer(bytes, true)
+	})
 
 	text.Draw(screen, "hello", *g.fontFace, 0, 24, color.NRGBA{255, 255, 255, 255})
 }

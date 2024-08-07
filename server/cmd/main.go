@@ -2,18 +2,31 @@ package main
 
 import (
 	"fmt"
-	"wzrds/common"
+	"os"
+	"os/signal"
+	"syscall"
+	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/server/internal/network"
 )
 
 func main() {
 	netServer := network.NewNetworkServer()
 
-	for {
-		eventStruct := netServer.CheckForEvents()
-		switch msg := eventStruct.(type) {
-		case common.ClientConnectionInfo:
-			fmt.Println("mess", msg)
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT)
+
+	go func() {
+		for {
+			eventStruct := netServer.CheckForEvents()
+			switch msg := eventStruct.(type) {
+			case msgfromclient.ConnectionInfo:
+				fmt.Println("mess", msg)
+			case msgfromclient.MoveInput:
+				fmt.Println(msg.Input)
+			}
 		}
-	}
+	}()
+
+	<-sigChan
+	netServer.Stop()
 }
