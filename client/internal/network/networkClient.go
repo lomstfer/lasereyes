@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"wzrds/common/netmsg"
+	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/netmsg/msgfromserver"
 
 	"github.com/codecat/go-enet"
@@ -42,10 +43,14 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 	switch event.GetType() {
 	case enet.EventConnect:
 		fmt.Println("connected")
-		nc.enetServerPeer.SendString("hello", 0, enet.PacketFlagReliable)
+		s := msgfromclient.ConnectMe{Name: "peter"}
+		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeConnectMe), s)
+		nc.SendToServer(bytes, true)
+
 	case enet.EventDisconnect:
 		fmt.Println("disconnected", event.GetPeer())
 		return msgfromserver.DisconnectSelf{}
+
 	case enet.EventReceive:
 		packet := event.GetPacket()
 		bytes := packet.GetData()
@@ -55,6 +60,15 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 		switch id {
 		case byte(msgfromserver.MsgTypeDisconnectedClient):
 			s := netmsg.GetStructFromBytes[msgfromserver.DisconnectedClient](bytes)
+			return s
+		case byte(msgfromserver.MsgTypeAddSelfPlayer):
+			s := netmsg.GetStructFromBytes[msgfromserver.AddSelfPlayer](bytes)
+			return s
+		case byte(msgfromserver.MsgTypeAddOtherPlayer):
+			s := netmsg.GetStructFromBytes[msgfromserver.AddOtherPlayer](bytes)
+			return s
+		case byte(msgfromserver.MsgTypeUpdatePlayers):
+			s := netmsg.GetStructFromBytes[msgfromserver.UpdatePlayers](bytes)
 			return s
 		}
 		return nil

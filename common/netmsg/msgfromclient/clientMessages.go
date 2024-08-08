@@ -1,11 +1,13 @@
 package msgfromclient
 
-import "wzrds/common"
+import (
+	"wzrds/common/player"
+)
 
-type ConnectionInfo struct {
+type ConnectMe struct {
 	Name string
 }
 
 type MoveInput struct {
-	Input []common.PlayerInput
+	Input []player.PlayerInput
 }

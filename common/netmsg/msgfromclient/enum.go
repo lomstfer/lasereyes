@@ -4,6 +4,6 @@ type MsgType int
 
 const (
 	MsgTypeUndefined MsgType = iota
-	MsgTypeConnectionInfo
+	MsgTypeConnectMe
 	MsgTypeMoveInput
 )
