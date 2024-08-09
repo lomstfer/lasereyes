@@ -1,17 +1,16 @@
 package game
 
 import (
-	"fmt"
 	"image/color"
 	"time"
 	"wzrds/client/internal"
 	"wzrds/client/internal/network"
+	"wzrds/common/commonutils"
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/netmsg/msgfromserver"
 	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
-	"wzrds/common/utils"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
@@ -25,7 +24,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		return
 	}
 
-	fmt.Println(g.timeSyncer.GetServerTime())
+	if g.selfPlayer == nil {
+		return
+	}
 
 	g.RealUpdate()
 
@@ -52,29 +53,25 @@ func (g *Game) HandleNetworkEvents() {
 		g.otherPlayers[msg.Data.Id] = &internal.Player{Data: msg.Data}
 
 	case msgfromserver.UpdatePlayers:
-		for id, snapshot := range msg.Players {
+		for id, snapshot := range msg.IdsToSnapshots {
 			if id == g.selfPlayer.Data.Id {
-			} else {
-				g.otherPlayers[id].Data.Position = snapshot.Position
+				continue
 			}
+			g.otherPlayers[id].SnapshotsForInterp = append(g.otherPlayers[id].SnapshotsForInterp, snapshot)
 		}
 
 	case msgfromserver.UpdateSelf:
 		g.selfPlayer.HandleServerUpdate(msg.LastAuthorizedInputId, msg.Snapshot)
 
 	case msgfromserver.TimeAnswer:
-		g.timeSyncer.OnTimeAnswer(utils.GetCurrentTimeAsFloat(), msg.Request.TimeSent, msg.TimeReceived)
+		g.timeSyncer.OnTimeAnswer(commonutils.GetCurrentTimeAsFloat(), msg.Request.TimeSent, msg.TimeReceived)
 	}
 }
 
 func (g *Game) RealUpdate() {
-	if g.selfPlayer == nil {
-		return
-	}
-
-	g.time = time.Since(g.startTime).Seconds()
-	timeNow := time.Now()
-	// dt := timeNow.Sub(g.lastUpdateTime).Seconds()
+	g.time = commonutils.GetCurrentTimeAsFloat() - g.startTime
+	timeNow := commonutils.GetCurrentTimeAsFloat()
+	// dt := timeNow - g.lastUpdateTime
 	g.lastUpdateTime = timeNow
 
 	g.getInputCallback.Update(func() {
@@ -97,7 +94,9 @@ func (g *Game) RealUpdate() {
 			Left:  inputVec.X == -1,
 			Right: inputVec.X == 1,
 		}
-		g.selfPlayer.AddInput(input)
+		if input.HasInput() {
+			g.selfPlayer.AddInput(input)
+		}
 	})
 
 	g.sendInputCallback.Update(func() {
@@ -106,6 +105,10 @@ func (g *Game) RealUpdate() {
 		g.netClient.SendToServer(bytes, true)
 		g.selfPlayer.OnSendInputs()
 	})
+
+	for _, p := range g.otherPlayers {
+		p.LerpBetweenSnapshots(g.timeSyncer.ServerTime())
+	}
 }
 
 func DrawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, pData player.CommonData) {

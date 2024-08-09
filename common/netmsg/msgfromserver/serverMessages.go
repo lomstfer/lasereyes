@@ -20,7 +20,7 @@ type AddOtherPlayer struct {
 }
 
 type UpdatePlayers struct {
-	Players map[uint]player.Snapshot
+	IdsToSnapshots map[uint]player.Snapshot
 }
 
 type UpdateSelf struct {

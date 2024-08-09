@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"fmt"
 	"wzrds/common/player"
 )
 
@@ -27,6 +28,7 @@ func (gs *GameServer) RemovePlayer(id uint) {
 }
 
 func (gs *GameServer) HandlePlayerInput(playerId uint, inputs []player.Input) {
+	fmt.Println(len(inputs))
 	p := gs.Players[playerId]
 	for _, i := range inputs {
 		if i.HasInput() {

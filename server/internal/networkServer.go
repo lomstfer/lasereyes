@@ -3,9 +3,9 @@ package internal
 import (
 	"fmt"
 	"os"
+	"wzrds/common/commonutils"
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
-	"wzrds/common/utils"
 
 	"github.com/codecat/go-enet"
 )
@@ -38,13 +38,13 @@ func (ns *NetworkServer) CheckForEvents() (uint, interface{}) {
 	case enet.EventConnect:
 		peer := event.GetPeer()
 		id := peer.GetConnectId()
-		peer.SetData(utils.UintToByteArray(id))
+		peer.SetData(commonutils.UintToByteArray(id))
 		ns.enetPeers[id] = peer
 		fmt.Println("connected id:", id)
 
 	case enet.EventDisconnect:
 		peer := event.GetPeer()
-		id := utils.ByteArrayToUint(peer.GetData())
+		id := commonutils.ByteArrayToUint(peer.GetData())
 		peer.SetData(nil)
 		fmt.Println("disconnected id:", id)
 

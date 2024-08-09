@@ -1,22 +1,20 @@
 package network
 
-import "wzrds/common/utils"
+import "wzrds/common/commonutils"
 
 type TimeSyncer struct {
-	syncsToDo   int
-	syncDeltaMS int
+	FinishedSync       bool
+	minimumSyncAnswers int
 
 	syncAnswersReceived int
 
 	smallestLatency float64
 	timeDiff        float64
-
-	FinishedSync bool
 }
 
-func NewTimeSyncer(syncsToDo int) *TimeSyncer {
+func NewTimeSyncer(minimumSyncAnswers int) *TimeSyncer {
 	ts := &TimeSyncer{}
-	ts.syncsToDo = syncsToDo
+	ts.minimumSyncAnswers = minimumSyncAnswers
 	ts.smallestLatency = -1
 
 	return ts
@@ -33,11 +31,11 @@ func (ts *TimeSyncer) OnTimeAnswer(currentTime float64, timeSentFromClient float
 	}
 
 	ts.syncAnswersReceived += 1
-	if ts.syncAnswersReceived >= ts.syncsToDo {
+	if ts.syncAnswersReceived >= ts.minimumSyncAnswers {
 		ts.FinishedSync = true
 	}
 }
 
-func (ts *TimeSyncer) GetServerTime() float64 {
-	return utils.GetCurrentTimeAsFloat() - ts.timeDiff
+func (ts *TimeSyncer) ServerTime() float64 {
+	return commonutils.GetCurrentTimeAsFloat() - ts.timeDiff
 }

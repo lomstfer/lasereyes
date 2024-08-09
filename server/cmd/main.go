@@ -1,17 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 	"wzrds/common"
+	"wzrds/common/commonutils"
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/netmsg/msgfromserver"
 	"wzrds/common/player"
-	"wzrds/common/utils"
 	"wzrds/server/internal"
 )
 
@@ -25,12 +24,11 @@ func main() {
 	simulationCallback := common.NewFixedCallback(1.0 / 60.0)
 	broadcastGameCallback := common.NewFixedCallback(1.0 / 10.0)
 
-	startedTime := utils.GetCurrentTimeAsFloat()
+	startedTime := commonutils.GetCurrentTimeAsFloat()
 
 	go func() {
 		for {
-			serverTime := utils.GetCurrentTimeAsFloat() - startedTime
-			fmt.Println(serverTime)
+			serverTime := commonutils.GetCurrentTimeAsFloat() - startedTime
 
 			eventPeerId, eventStruct := netServer.CheckForEvents()
 			switch msg := eventStruct.(type) {
@@ -66,7 +64,7 @@ func main() {
 			case msgfromclient.TimeRequest:
 				s := msgfromserver.TimeAnswer{Request: msg, TimeReceived: serverTime}
 				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeTimeAnswer), s)
-				netServer.SendTo(eventPeerId, bytes, true)
+				netServer.SendTo(eventPeerId, bytes, false)
 			}
 
 			simulationCallback.Update(func() {
@@ -77,7 +75,7 @@ func main() {
 				playersToUpdate := make(map[uint]player.Snapshot, 0)
 				for id := range gameServer.PlayersThatMoved {
 					p := gameServer.Players[id]
-					snapshot := player.Snapshot{Time: time.Now(), Position: p.Data.Position}
+					snapshot := player.Snapshot{Time: serverTime, Position: p.Data.Position}
 					playersToUpdate[id] = snapshot
 
 					{
@@ -90,7 +88,7 @@ func main() {
 					delete(gameServer.PlayersThatMoved, k)
 				}
 
-				s := msgfromserver.UpdatePlayers{Players: playersToUpdate}
+				s := msgfromserver.UpdatePlayers{IdsToSnapshots: playersToUpdate}
 				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdatePlayers), s)
 				netServer.SendToAll(bytes, false)
 			})

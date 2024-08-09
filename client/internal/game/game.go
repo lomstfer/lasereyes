@@ -12,18 +12,18 @@ import (
 	"wzrds/client/internal/network"
 	"wzrds/client/pkg/utils"
 	"wzrds/common"
+	commonutils "wzrds/common/commonutils"
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
-	commonutils "wzrds/common/utils"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/image/font"
 )
 
 type Game struct {
-	startTime      time.Time
-	time           float64 // seconds
-	lastUpdateTime time.Time
+	startTime      float64
+	time           float64
+	lastUpdateTime float64
 	fontFace       *font.Face
 
 	finishedAssetLoading bool
@@ -51,8 +51,8 @@ func NewGame(assetFS embed.FS) *Game {
 	ebiten.SetWindowClosingHandled(true)
 
 	game := &Game{}
-	game.startTime = time.Now()
-	game.lastUpdateTime = time.Now()
+	game.startTime = commonutils.GetCurrentTimeAsFloat()
+	game.lastUpdateTime = game.startTime
 
 	game.timeSyncer = network.NewTimeSyncer(10)
 
@@ -85,7 +85,7 @@ func (g *Game) syncTime(deltaSleep time.Duration) {
 	for !g.timeSyncer.FinishedSync {
 		request := msgfromclient.TimeRequest{TimeSent: commonutils.GetCurrentTimeAsFloat()}
 		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeTimeRequest), request)
-		g.netClient.SendToServer(bytes, true)
+		g.netClient.SendToServer(bytes, false)
 		time.Sleep(deltaSleep)
 	}
 }

@@ -19,6 +19,6 @@ func SimulateInput(playerData *CommonData, input Input, deltaTime float64) {
 		inputVec.X += 1
 	}
 	inputVec.Normalize()
-	inputVec.Mul(100 * deltaTime)
+	inputVec.Mul(200 * deltaTime)
 	playerData.Position.Add(inputVec)
 }
