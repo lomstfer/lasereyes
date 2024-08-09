@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,6 +11,7 @@ import (
 	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/netmsg/msgfromserver"
 	"wzrds/common/player"
+	"wzrds/common/utils"
 	"wzrds/server/internal"
 )
 
@@ -21,11 +23,15 @@ func main() {
 	gameServer := internal.NewGameServer()
 
 	simulationCallback := common.NewFixedCallback(1.0 / 60.0)
-
 	broadcastGameCallback := common.NewFixedCallback(1.0 / 10.0)
+
+	startedTime := utils.GetCurrentTimeAsFloat()
 
 	go func() {
 		for {
+			serverTime := utils.GetCurrentTimeAsFloat() - startedTime
+			fmt.Println(serverTime)
+
 			eventPeerId, eventStruct := netServer.CheckForEvents()
 			switch msg := eventStruct.(type) {
 			case msgfromclient.ConnectMe:
@@ -56,6 +62,11 @@ func main() {
 
 			case msgfromclient.MoveInput:
 				gameServer.HandlePlayerInput(eventPeerId, msg.Input)
+
+			case msgfromclient.TimeRequest:
+				s := msgfromserver.TimeAnswer{Request: msg, TimeReceived: serverTime}
+				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeTimeAnswer), s)
+				netServer.SendTo(eventPeerId, bytes, true)
 			}
 
 			simulationCallback.Update(func() {

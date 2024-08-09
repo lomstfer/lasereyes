@@ -31,8 +31,17 @@ func (v *Vec2) Div(s float64) {
 	v.Y /= s
 }
 
+func (v *Vec2) Normalize() {
+	length := v.Length()
+	if length == 0 {
+		return
+	}
+	v.X /= length
+	v.Y /= length
+}
+
 func (v *Vec2) Length() float64 {
-	return float64(math.Sqrt(float64(v.X*v.X + v.Y*v.Y)))
+	return math.Sqrt(v.X*v.X + v.Y*v.Y)
 }
 
 func (v *Vec2) SqrLength() float64 {

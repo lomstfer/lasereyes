@@ -46,10 +46,11 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 		s := msgfromclient.ConnectMe{Name: "peter"}
 		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeConnectMe), s)
 		nc.SendToServer(bytes, true)
+		return Connected{}
 
 	case enet.EventDisconnect:
 		fmt.Println("disconnected", event.GetPeer())
-		return msgfromserver.DisconnectSelf{}
+		return Disconnected{}
 
 	case enet.EventReceive:
 		packet := event.GetPacket()
@@ -72,6 +73,9 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 			return s
 		case byte(msgfromserver.MsgTypeUpdateSelf):
 			s := netmsg.GetStructFromBytes[msgfromserver.UpdateSelf](bytes)
+			return s
+		case byte(msgfromserver.MsgTypeTimeAnswer):
+			s := netmsg.GetStructFromBytes[msgfromserver.TimeAnswer](bytes)
 			return s
 		}
 		return nil

@@ -12,6 +12,9 @@ import (
 	"wzrds/client/internal/network"
 	"wzrds/client/pkg/utils"
 	"wzrds/common"
+	"wzrds/common/netmsg"
+	"wzrds/common/netmsg/msgfromclient"
+	commonutils "wzrds/common/utils"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/image/font"
@@ -31,6 +34,8 @@ type Game struct {
 	timeOfCloseInput        time.Time
 	cleanClose              bool
 
+	timeSyncer *network.TimeSyncer
+
 	getInputCallback  *common.FixedCallback
 	sendInputCallback *common.FixedCallback
 
@@ -48,6 +53,8 @@ func NewGame(assetFS embed.FS) *Game {
 	game := &Game{}
 	game.startTime = time.Now()
 	game.lastUpdateTime = time.Now()
+
+	game.timeSyncer = network.NewTimeSyncer(10)
 
 	game.getInputCallback = common.NewFixedCallback(1.0 / 60.0)
 
@@ -72,6 +79,15 @@ func (g *Game) loadAssets(assetFS embed.FS) {
 	g.fontFace = utils.GetFontFace(fontBytes)
 
 	g.finishedAssetLoading = true
+}
+
+func (g *Game) syncTime(deltaSleep time.Duration) {
+	for !g.timeSyncer.FinishedSync {
+		request := msgfromclient.TimeRequest{TimeSent: commonutils.GetCurrentTimeAsFloat()}
+		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeTimeRequest), request)
+		g.netClient.SendToServer(bytes, true)
+		time.Sleep(deltaSleep)
+	}
 }
 
 // called 60 times per second

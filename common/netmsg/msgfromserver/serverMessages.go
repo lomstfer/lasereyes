@@ -1,6 +1,7 @@
 package msgfromserver
 
 import (
+	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/player"
 )
 
@@ -25,4 +26,9 @@ type UpdatePlayers struct {
 type UpdateSelf struct {
 	LastAuthorizedInputId uint32
 	Snapshot              player.Snapshot
+}
+
+type TimeAnswer struct {
+	Request      msgfromclient.TimeRequest
+	TimeReceived float64
 }

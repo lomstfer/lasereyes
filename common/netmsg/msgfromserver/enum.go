@@ -9,4 +9,5 @@ const (
 	MsgTypeAddOtherPlayer
 	MsgTypeUpdatePlayers
 	MsgTypeUpdateSelf
+	MsgTypeTimeAnswer
 )

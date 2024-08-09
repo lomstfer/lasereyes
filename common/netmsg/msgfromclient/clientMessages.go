@@ -11,3 +11,7 @@ type ConnectMe struct {
 type MoveInput struct {
 	Input []player.Input
 }
+
+type TimeRequest struct {
+	TimeSent float64
+}

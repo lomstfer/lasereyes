@@ -6,4 +6,5 @@ const (
 	MsgTypeUndefined MsgType = iota
 	MsgTypeConnectMe
 	MsgTypeMoveInput
+	MsgTypeTimeRequest
 )

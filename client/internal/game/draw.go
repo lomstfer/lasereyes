@@ -1,28 +1,48 @@
 package game
 
 import (
+	"fmt"
 	"image/color"
 	"time"
 	"wzrds/client/internal"
+	"wzrds/client/internal/network"
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/netmsg/msgfromserver"
 	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
+	"wzrds/common/utils"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
 )
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	if !g.finishedAssetLoading {
+	g.HandleNetworkEvents()
+
+	if !g.finishedAssetLoading || !g.timeSyncer.FinishedSync {
 		screen.Fill(color.NRGBA{255, 0, 0, 255})
 		return
 	}
 
+	fmt.Println(g.timeSyncer.GetServerTime())
+
+	g.RealUpdate()
+
+	text.Draw(screen, "hello", *g.fontFace, 0, 24, color.NRGBA{255, 255, 255, 255})
+	DrawPlayer(screen, g.playerImage, g.selfPlayer.Data)
+	for _, p := range g.otherPlayers {
+		DrawPlayer(screen, g.playerImage, p.Data)
+	}
+}
+
+func (g *Game) HandleNetworkEvents() {
 	netMessage := g.netClient.CheckForEvents()
 	switch msg := netMessage.(type) {
-	case msgfromserver.DisconnectSelf:
+	case network.Connected:
+		go g.syncTime(time.Millisecond * 100)
+
+	case network.Disconnected:
 		g.cleanClose = true
 
 	case msgfromserver.AddSelfPlayer:
@@ -41,8 +61,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	case msgfromserver.UpdateSelf:
 		g.selfPlayer.HandleServerUpdate(msg.LastAuthorizedInputId, msg.Snapshot)
-	}
 
+	case msgfromserver.TimeAnswer:
+		g.timeSyncer.OnTimeAnswer(utils.GetCurrentTimeAsFloat(), msg.Request.TimeSent, msg.TimeReceived)
+	}
+}
+
+func (g *Game) RealUpdate() {
 	if g.selfPlayer == nil {
 		return
 	}
@@ -81,12 +106,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.netClient.SendToServer(bytes, true)
 		g.selfPlayer.OnSendInputs()
 	})
-
-	text.Draw(screen, "hello", *g.fontFace, 0, 24, color.NRGBA{255, 255, 255, 255})
-	DrawPlayer(screen, g.playerImage, g.selfPlayer.Data)
-	for _, p := range g.otherPlayers {
-		DrawPlayer(screen, g.playerImage, p.Data)
-	}
 }
 
 func DrawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, pData player.CommonData) {

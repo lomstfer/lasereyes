@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/binary"
+	"time"
 	"unsafe"
 )
 
@@ -35,4 +36,8 @@ func ByteArrayToUint(b []byte) uint {
 	default:
 		panic("unsupported byte array size")
 	}
+}
+
+func GetCurrentTimeAsFloat() float64 {
+	return float64(time.Now().UnixNano()) / 1000000000.0
 }

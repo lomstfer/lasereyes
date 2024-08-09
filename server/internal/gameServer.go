@@ -7,6 +7,7 @@ import (
 type GameServer struct {
 	Players          map[uint]*Player
 	PlayersThatMoved map[uint]bool
+	Tick             uint64
 }
 
 func NewGameServer() *GameServer {
@@ -45,4 +46,5 @@ func (gs *GameServer) Simulate(deltaTime float64) {
 			p.QueuedInputs = p.QueuedInputs[1:]
 		}
 	}
+	gs.Tick += 1
 }
