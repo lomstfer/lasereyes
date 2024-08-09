@@ -7,11 +7,11 @@ import (
 	"image/color"
 	"os"
 	"time"
+	"wzrds/client/internal"
 	"wzrds/client/internal/constants"
 	"wzrds/client/internal/network"
 	"wzrds/client/pkg/utils"
 	"wzrds/common"
-	"wzrds/common/player"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/image/font"
@@ -31,12 +31,11 @@ type Game struct {
 	timeOfCloseInput        time.Time
 	cleanClose              bool
 
-	getInputCallback        *common.FixedCallback
-	sendInputCallback       *common.FixedCallback
-	accumulatedPlayerInputs []player.PlayerInput
+	getInputCallback  *common.FixedCallback
+	sendInputCallback *common.FixedCallback
 
-	selfPlayer   player.PlayerSpawnData
-	otherPlayers map[uint]player.PlayerSpawnData
+	selfPlayer   *internal.SelfPlayer
+	otherPlayers map[uint]*internal.Player
 	playerImage  *ebiten.Image
 }
 
@@ -53,8 +52,7 @@ func NewGame(assetFS embed.FS) *Game {
 	game.getInputCallback = common.NewFixedCallback(1.0 / 60.0)
 
 	game.sendInputCallback = common.NewFixedCallback(1.0 / 30.0)
-	game.accumulatedPlayerInputs = make([]player.PlayerInput, 0)
-	game.otherPlayers = make(map[uint]player.PlayerSpawnData)
+	game.otherPlayers = make(map[uint]*internal.Player)
 	game.playerImage = ebiten.NewImage(20, 20)
 	game.playerImage.Fill(color.NRGBA{255, 0, 0, 255})
 

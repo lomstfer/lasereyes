@@ -5,33 +5,43 @@ import (
 )
 
 type GameServer struct {
-	Players map[uint]*Player
+	Players          map[uint]*Player
+	PlayersThatMoved map[uint]bool
 }
 
 func NewGameServer() *GameServer {
 	gs := &GameServer{}
 	gs.Players = make(map[uint]*Player, 0)
+	gs.PlayersThatMoved = make(map[uint]bool)
 
 	return gs
 }
 
-func (gs *GameServer) AddPlayer(p player.PlayerSpawnData) {
-	gs.Players[p.Id] = &Player{Id: p.Id, Name: p.Name, Position: p.Position, Velocity: p.Velocity}
+func (gs *GameServer) AddPlayer(p player.CommonData) {
+	gs.Players[p.Id] = &Player{Data: p}
 }
 
 func (gs *GameServer) RemovePlayer(id uint) {
 	delete(gs.Players, id)
 }
 
-func (gs *GameServer) HandlePlayerInput(id uint, inputs []player.PlayerInput) {
-	p := gs.Players[id]
-	p.QueuedInputs = append(p.QueuedInputs, inputs...)
+func (gs *GameServer) HandlePlayerInput(playerId uint, inputs []player.Input) {
+	p := gs.Players[playerId]
+	for _, i := range inputs {
+		if i.HasInput() {
+			p.QueuedInputs = append(p.QueuedInputs, inputs...)
+			gs.PlayersThatMoved[playerId] = true
+			break
+		}
+	}
 }
 
 func (gs *GameServer) Simulate(deltaTime float64) {
 	for _, p := range gs.Players {
-		if len(p.QueuedInputs) > 0 {
-			SimulateInput(p, p.QueuedInputs[0], deltaTime)
+		for len(p.QueuedInputs) > 0 {
+			input := p.QueuedInputs[0]
+			player.SimulateInput(&p.Data, input, deltaTime)
+			p.LastAuthorizedInputId = input.Id
 			p.QueuedInputs = p.QueuedInputs[1:]
 		}
 	}

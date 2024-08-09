@@ -70,6 +70,9 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 		case byte(msgfromserver.MsgTypeUpdatePlayers):
 			s := netmsg.GetStructFromBytes[msgfromserver.UpdatePlayers](bytes)
 			return s
+		case byte(msgfromserver.MsgTypeUpdateSelf):
+			s := netmsg.GetStructFromBytes[msgfromserver.UpdateSelf](bytes)
+			return s
 		}
 		return nil
 	}

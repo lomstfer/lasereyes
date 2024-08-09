@@ -9,7 +9,6 @@ import (
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/netmsg/msgfromserver"
-	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
 	"wzrds/server/internal"
 )
@@ -30,18 +29,31 @@ func main() {
 			eventPeerId, eventStruct := netServer.CheckForEvents()
 			switch msg := eventStruct.(type) {
 			case msgfromclient.ConnectMe:
-				data := player.PlayerSpawnData{Name: msg.Name, Id: eventPeerId}
-				gameServer.AddPlayer(data)
+				newPlayerData := player.CommonData{Name: msg.Name, Id: eventPeerId}
+
+				// add new player to new player
 				{
-					addSelfStruct := msgfromserver.AddSelfPlayer{Data: data}
+					addSelfStruct := msgfromserver.AddSelfPlayer{Data: newPlayerData}
 					addSelfBytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeAddSelfPlayer), addSelfStruct)
 					netServer.SendTo(eventPeerId, addSelfBytes, true)
 				}
+
+				// add old players to new player
+				for _, p := range gameServer.Players {
+					addOtherStruct := msgfromserver.AddOtherPlayer{Data: p.Data}
+					addOtherBytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeAddOtherPlayer), addOtherStruct)
+					netServer.SendTo(eventPeerId, addOtherBytes, true)
+				}
+
+				// add new player to old players
 				{
-					addOtherStruct := msgfromserver.AddOtherPlayer{Data: data}
+					addOtherStruct := msgfromserver.AddOtherPlayer{Data: newPlayerData}
 					addOtherBytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeAddOtherPlayer), addOtherStruct)
 					netServer.SendToAllExcept(eventPeerId, addOtherBytes, true)
 				}
+
+				gameServer.AddPlayer(newPlayerData)
+
 			case msgfromclient.MoveInput:
 				gameServer.HandlePlayerInput(eventPeerId, msg.Input)
 			}
@@ -51,10 +63,22 @@ func main() {
 			})
 
 			broadcastGameCallback.Update(func() {
-				playersToUpdate := make(map[uint]vec2.Vec2, 0)
-				for id, p := range gameServer.Players {
-					playersToUpdate[id] = p.Position
+				playersToUpdate := make(map[uint]player.Snapshot, 0)
+				for id := range gameServer.PlayersThatMoved {
+					p := gameServer.Players[id]
+					snapshot := player.Snapshot{Time: time.Now(), Position: p.Data.Position}
+					playersToUpdate[id] = snapshot
+
+					{
+						s := msgfromserver.UpdateSelf{LastAuthorizedInputId: p.LastAuthorizedInputId, Snapshot: snapshot}
+						bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdateSelf), s)
+						netServer.SendTo(id, bytes, false)
+					}
 				}
+				for k := range gameServer.PlayersThatMoved {
+					delete(gameServer.PlayersThatMoved, k)
+				}
+
 				s := msgfromserver.UpdatePlayers{Players: playersToUpdate}
 				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdatePlayers), s)
 				netServer.SendToAll(bytes, false)

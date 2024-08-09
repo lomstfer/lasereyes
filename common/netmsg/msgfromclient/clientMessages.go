@@ -9,5 +9,5 @@ type ConnectMe struct {
 }
 
 type MoveInput struct {
-	Input []player.PlayerInput
+	Input []player.Input
 }

@@ -1,7 +1,6 @@
 package msgfromserver
 
 import (
-	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
 )
 
@@ -12,13 +11,18 @@ type DisconnectedClient struct {
 type DisconnectSelf struct{}
 
 type AddSelfPlayer struct {
-	Data player.PlayerSpawnData
+	Data player.CommonData
 }
 
 type AddOtherPlayer struct {
-	Data player.PlayerSpawnData
+	Data player.CommonData
 }
 
 type UpdatePlayers struct {
-	Players map[uint]vec2.Vec2
+	Players map[uint]player.Snapshot
+}
+
+type UpdateSelf struct {
+	LastAuthorizedInputId uint32
+	Snapshot              player.Snapshot
 }

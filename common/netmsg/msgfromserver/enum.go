@@ -8,4 +8,5 @@ const (
 	MsgTypeAddSelfPlayer
 	MsgTypeAddOtherPlayer
 	MsgTypeUpdatePlayers
+	MsgTypeUpdateSelf
 )
