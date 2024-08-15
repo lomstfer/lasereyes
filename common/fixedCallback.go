@@ -17,8 +17,9 @@ func NewFixedCallback(deltaSeconds float64) *FixedCallback {
 
 // Calls the callback function if enough time has been accumulated
 func (fc *FixedCallback) Update(callback func()) {
-	fc.accumulator += time.Since(fc.lastUpdateTime).Seconds()
-	fc.lastUpdateTime = time.Now()
+	now := time.Now()
+	fc.accumulator += now.Sub(fc.lastUpdateTime).Seconds()
+	fc.lastUpdateTime = now
 	for fc.accumulator >= fc.deltaSeconds {
 		fc.accumulator -= fc.deltaSeconds
 		callback()

@@ -11,40 +11,45 @@ func NewVec2(x float64, y float64) Vec2 {
 	return Vec2{x, y}
 }
 
-func (v *Vec2) Add(v2 Vec2) {
+func (v Vec2) Add(v2 Vec2) Vec2 {
 	v.X += v2.X
 	v.Y += v2.Y
+	return v
 }
 
-func (v *Vec2) Sub(v2 Vec2) {
+func (v Vec2) Sub(v2 Vec2) Vec2 {
 	v.X -= v2.X
 	v.Y -= v2.Y
+	return v
 }
 
-func (v *Vec2) Mul(s float64) {
+func (v Vec2) Mul(s float64) Vec2 {
 	v.X *= s
 	v.Y *= s
+	return v
 }
 
-func (v *Vec2) Div(s float64) {
+func (v Vec2) Div(s float64) Vec2 {
 	v.X /= s
 	v.Y /= s
+	return v
 }
 
-func (v *Vec2) Normalize() {
+func (v Vec2) Normalized() Vec2 {
 	length := v.Length()
 	if length == 0 {
-		return
+		return v
 	}
 	v.X /= length
 	v.Y /= length
+	return v
 }
 
-func (v *Vec2) Length() float64 {
+func (v Vec2) Length() float64 {
 	return math.Sqrt(v.X*v.X + v.Y*v.Y)
 }
 
-func (v *Vec2) SqrLength() float64 {
+func (v Vec2) SqrLength() float64 {
 	return v.X*v.X + v.Y*v.Y
 }
 

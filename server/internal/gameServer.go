@@ -1,14 +1,12 @@
 package internal
 
 import (
-	"fmt"
 	"wzrds/common/player"
 )
 
 type GameServer struct {
 	Players          map[uint]*Player
 	PlayersThatMoved map[uint]bool
-	Tick             uint64
 }
 
 func NewGameServer() *GameServer {
@@ -27,26 +25,27 @@ func (gs *GameServer) RemovePlayer(id uint) {
 	delete(gs.Players, id)
 }
 
-func (gs *GameServer) HandlePlayerInput(playerId uint, inputs []player.Input) {
-	fmt.Println(len(inputs))
+func (gs *GameServer) HandlePlayerInput(playerId uint, inputs []player.Input, serverTime float64) {
 	p := gs.Players[playerId]
 	for _, i := range inputs {
 		if i.HasInput() {
-			p.QueuedInputs = append(p.QueuedInputs, inputs...)
+			p.QueuedInputs = append(p.QueuedInputs, InputServerSide{Input: i})
 			gs.PlayersThatMoved[playerId] = true
-			break
 		}
 	}
+
+	// sort.Slice(p.QueuedInputs, func(i, j int) bool {
+	// 	return p.QueuedInputs[i].Id < p.QueuedInputs[j].Id
+	// })
 }
 
-func (gs *GameServer) Simulate(deltaTime float64) {
+func (gs *GameServer) Simulate(deltaTime float64, serverTime float64) {
 	for _, p := range gs.Players {
-		for len(p.QueuedInputs) > 0 {
+		if len(p.QueuedInputs) > 0 {
 			input := p.QueuedInputs[0]
-			player.SimulateInput(&p.Data, input, deltaTime)
-			p.LastAuthorizedInputId = input.Id
+			player.SimulateInput(&p.Data, input.Input, deltaTime)
+			p.LastAuthorizedInputId = input.Input.Id
 			p.QueuedInputs = p.QueuedInputs[1:]
 		}
 	}
-	gs.Tick += 1
 }

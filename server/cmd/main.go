@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,13 +13,14 @@ import (
 	"wzrds/common/netmsg/msgfromserver"
 	"wzrds/common/player"
 	"wzrds/server/internal"
+	"wzrds/server/internal/network"
 )
 
 func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT)
 
-	netServer := internal.NewNetworkServer()
+	netServer := network.NewNetworkServer()
 	gameServer := internal.NewGameServer()
 
 	simulationCallback := common.NewFixedCallback(1.0 / 60.0)
@@ -58,8 +60,11 @@ func main() {
 
 				gameServer.AddPlayer(newPlayerData)
 
+			case network.ClientDisconnected:
+				gameServer.RemovePlayer(eventPeerId)
+
 			case msgfromclient.MoveInput:
-				gameServer.HandlePlayerInput(eventPeerId, msg.Input)
+				gameServer.HandlePlayerInput(eventPeerId, msg.Input, serverTime)
 
 			case msgfromclient.TimeRequest:
 				s := msgfromserver.TimeAnswer{Request: msg, TimeReceived: serverTime}
@@ -68,15 +73,19 @@ func main() {
 			}
 
 			simulationCallback.Update(func() {
-				gameServer.Simulate(1.0 / 60.0)
+				gameServer.Simulate(1.0/60.0, serverTime)
 			})
 
 			broadcastGameCallback.Update(func() {
+
 				playersToUpdate := make(map[uint]player.Snapshot, 0)
-				for id := range gameServer.PlayersThatMoved {
+				for id := range gameServer.Players {
 					p := gameServer.Players[id]
 					snapshot := player.Snapshot{Time: serverTime, Position: p.Data.Position}
 					playersToUpdate[id] = snapshot
+
+					fmt.Println(len(p.QueuedInputs), p.Data.Position.Sub(p.LastPos).Length())
+					p.LastPos = p.Data.Position
 
 					{
 						s := msgfromserver.UpdateSelf{LastAuthorizedInputId: p.LastAuthorizedInputId, Snapshot: snapshot}

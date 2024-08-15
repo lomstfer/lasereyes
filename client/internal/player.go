@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"sort"
 	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
@@ -13,17 +12,18 @@ type Player struct {
 }
 
 func (p *Player) LerpBetweenSnapshots(syncedServerTime float64) {
-	fmt.Println(len(p.SnapshotsForInterp))
-
-	if len(p.SnapshotsForInterp) < 2 {
-		return
-	}
-
 	sort.Slice(p.SnapshotsForInterp, func(i, j int) bool {
 		return p.SnapshotsForInterp[i].Time < p.SnapshotsForInterp[j].Time
 	})
 
 	renderingTime := syncedServerTime - 0.2
+
+	if len(p.SnapshotsForInterp) < 2 {
+		if len(p.SnapshotsForInterp) == 1 {
+			p.SnapshotsForInterp[0].Time = renderingTime
+		}
+		return
+	}
 
 	// remove old snapshots
 	for len(p.SnapshotsForInterp) >= 2 && p.SnapshotsForInterp[1].Time < renderingTime {

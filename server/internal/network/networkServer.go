@@ -1,4 +1,4 @@
-package internal
+package network
 
 import (
 	"fmt"
@@ -47,6 +47,7 @@ func (ns *NetworkServer) CheckForEvents() (uint, interface{}) {
 		id := commonutils.ByteArrayToUint(peer.GetData())
 		peer.SetData(nil)
 		fmt.Println("disconnected id:", id)
+		return id, ClientDisconnected{}
 
 	case enet.EventReceive:
 		peerId := event.GetPeer().GetConnectId()

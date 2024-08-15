@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"image/color"
 	"time"
 	"wzrds/client/internal"
@@ -103,6 +104,7 @@ func (g *Game) RealUpdate() {
 		packetStruct := msgfromclient.MoveInput{Input: g.selfPlayer.InputsToSend}
 		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeMoveInput), packetStruct)
 		g.netClient.SendToServer(bytes, true)
+		fmt.Println(len(g.selfPlayer.InputsToSend))
 		g.selfPlayer.OnSendInputs()
 	})
 
