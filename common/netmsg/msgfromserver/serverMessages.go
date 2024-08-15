@@ -20,6 +20,7 @@ type AddOtherPlayer struct {
 }
 
 type UpdatePlayers struct {
+	Id             int32
 	IdsToSnapshots map[uint]player.Snapshot
 }
 

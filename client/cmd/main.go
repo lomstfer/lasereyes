@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	_ "embed"
 	"log"
 	"wzrds/client/internal/game"
 
@@ -10,6 +9,7 @@ import (
 )
 
 //go:embed embed_assets/Roboto-Regular.ttf
+//go:embed embed_assets/dud.png
 var assetFS embed.FS
 
 func main() {

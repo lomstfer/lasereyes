@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"image/color"
-	"time"
 	"wzrds/client/internal"
 	"wzrds/client/internal/network"
 	"wzrds/common/commonutils"
@@ -17,32 +16,11 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text"
 )
 
-func (g *Game) Draw(screen *ebiten.Image) {
-	g.HandleNetworkEvents()
-
-	if !g.finishedAssetLoading || !g.timeSyncer.FinishedSync {
-		screen.Fill(color.NRGBA{255, 0, 0, 255})
-		return
-	}
-
-	if g.selfPlayer == nil {
-		return
-	}
-
-	g.RealUpdate()
-
-	text.Draw(screen, "hello", *g.fontFace, 0, 24, color.NRGBA{255, 255, 255, 255})
-	DrawPlayer(screen, g.playerImage, g.selfPlayer.Data)
-	for _, p := range g.otherPlayers {
-		DrawPlayer(screen, g.playerImage, p.Data)
-	}
-}
-
 func (g *Game) HandleNetworkEvents() {
 	netMessage := g.netClient.CheckForEvents()
 	switch msg := netMessage.(type) {
 	case network.Connected:
-		go g.syncTime(time.Millisecond * 100)
+		go g.syncTime()
 
 	case network.Disconnected:
 		g.cleanClose = true
@@ -54,6 +32,10 @@ func (g *Game) HandleNetworkEvents() {
 		g.otherPlayers[msg.Data.Id] = &internal.Player{Data: msg.Data}
 
 	case msgfromserver.UpdatePlayers:
+		if g.li != msg.Id-1 {
+			fmt.Println("we lost them")
+		}
+		g.li = msg.Id
 		for id, snapshot := range msg.IdsToSnapshots {
 			if id == g.selfPlayer.Data.Id {
 				continue
@@ -104,7 +86,6 @@ func (g *Game) RealUpdate() {
 		packetStruct := msgfromclient.MoveInput{Input: g.selfPlayer.InputsToSend}
 		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeMoveInput), packetStruct)
 		g.netClient.SendToServer(bytes, true)
-		fmt.Println(len(g.selfPlayer.InputsToSend))
 		g.selfPlayer.OnSendInputs()
 	})
 
@@ -113,8 +94,30 @@ func (g *Game) RealUpdate() {
 	}
 }
 
+func (g *Game) Draw(screen *ebiten.Image) {
+	g.HandleNetworkEvents()
+
+	if !g.finishedAssetLoading || !g.timeSyncer.FinishedSync {
+		screen.Fill(color.NRGBA{255, 0, 0, 255})
+		return
+	}
+
+	if g.selfPlayer == nil {
+		return
+	}
+
+	g.RealUpdate()
+
+	text.Draw(screen, "hello", *g.fontFace, 0, 24, color.NRGBA{255, 255, 255, 255})
+	DrawPlayer(screen, g.playerImage, g.selfPlayer.Data)
+	for _, p := range g.otherPlayers {
+		DrawPlayer(screen, g.playerImage, p.Data)
+	}
+}
+
 func DrawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, pData player.CommonData) {
 	geo := ebiten.GeoM{}
+	geo.Scale(3, 3)
 	geo.Translate(pData.Position.X, pData.Position.Y)
 	screen.DrawImage(playerImage, &ebiten.DrawImageOptions{GeoM: geo})
 }

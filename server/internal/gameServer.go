@@ -30,7 +30,6 @@ func (gs *GameServer) HandlePlayerInput(playerId uint, inputs []player.Input, se
 	for _, i := range inputs {
 		if i.HasInput() {
 			p.QueuedInputs = append(p.QueuedInputs, InputServerSide{Input: i})
-			gs.PlayersThatMoved[playerId] = true
 		}
 	}
 
@@ -46,6 +45,7 @@ func (gs *GameServer) Simulate(deltaTime float64, serverTime float64) {
 			player.SimulateInput(&p.Data, input.Input, deltaTime)
 			p.LastAuthorizedInputId = input.Input.Id
 			p.QueuedInputs = p.QueuedInputs[1:]
+			gs.PlayersThatMoved[p.Data.Id] = true
 		}
 	}
 }

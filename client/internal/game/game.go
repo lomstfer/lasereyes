@@ -4,7 +4,6 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"image/color"
 	"os"
 	"time"
 	"wzrds/client/internal"
@@ -13,6 +12,7 @@ import (
 	"wzrds/client/pkg/utils"
 	"wzrds/common"
 	commonutils "wzrds/common/commonutils"
+	commonconstants "wzrds/common/constants"
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
 
@@ -42,6 +42,8 @@ type Game struct {
 	selfPlayer   *internal.SelfPlayer
 	otherPlayers map[uint]*internal.Player
 	playerImage  *ebiten.Image
+
+	li int32
 }
 
 func NewGame(assetFS embed.FS) *Game {
@@ -54,14 +56,14 @@ func NewGame(assetFS embed.FS) *Game {
 	game.startTime = commonutils.GetCurrentTimeAsFloat()
 	game.lastUpdateTime = game.startTime
 
-	game.timeSyncer = network.NewTimeSyncer(10)
+	game.timeSyncer = network.NewTimeSyncer(constants.TimesToSyncClock)
 
-	game.getInputCallback = common.NewFixedCallback(1.0 / 60.0)
+	game.getInputCallback = common.NewFixedCallback(commonconstants.SimulationTickRate)
 
-	game.sendInputCallback = common.NewFixedCallback(1.0 / 30.0)
+	game.sendInputCallback = common.NewFixedCallback(constants.SendInputRate)
 	game.otherPlayers = make(map[uint]*internal.Player)
-	game.playerImage = ebiten.NewImage(20, 20)
-	game.playerImage.Fill(color.NRGBA{255, 0, 0, 255})
+	assetFS.ReadFile("embed_assets/dud.png")
+	game.playerImage = ebiten.NewImageFromImage(*utils.LoadImageInFs(assetFS, "embed_assets/dud.png"))
 
 	game.netClient = network.NewNetworkClient()
 
@@ -81,12 +83,12 @@ func (g *Game) loadAssets(assetFS embed.FS) {
 	g.finishedAssetLoading = true
 }
 
-func (g *Game) syncTime(deltaSleep time.Duration) {
+func (g *Game) syncTime() {
 	for !g.timeSyncer.FinishedSync {
 		request := msgfromclient.TimeRequest{TimeSent: commonutils.GetCurrentTimeAsFloat()}
 		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeTimeRequest), request)
 		g.netClient.SendToServer(bytes, false)
-		time.Sleep(deltaSleep)
+		time.Sleep(time.Millisecond * constants.ServerTimeSyncDeltaMS)
 	}
 }
 

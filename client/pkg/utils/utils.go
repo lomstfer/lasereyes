@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"embed"
 	"fmt"
 	"image"
+	_ "image/png"
 	"os"
 
 	"golang.org/x/image/font"
@@ -12,14 +14,31 @@ import (
 func LoadImage(filePath string) *image.Image {
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Printf("failed to open file: %v", err)
+		fmt.Println("failed to open file, error:", err)
 		os.Exit(1)
 	}
 	defer file.Close()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
-		fmt.Printf("failed to decode image: %v", err)
+		fmt.Println("failed to decode image, error:", err)
+		os.Exit(1)
+	}
+
+	return &img
+}
+
+func LoadImageInFs(fs embed.FS, filePath string) *image.Image {
+	file, err := fs.Open(filePath)
+	if err != nil {
+		fmt.Println("failed to open file, error:", err)
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	img, _, err := image.Decode(file)
+	if err != nil {
+		fmt.Println("failed to decode image, error:", err)
 		os.Exit(1)
 	}
 

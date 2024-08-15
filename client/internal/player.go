@@ -2,6 +2,7 @@ package internal
 
 import (
 	"sort"
+	"wzrds/common/constants"
 	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
 )
@@ -16,9 +17,10 @@ func (p *Player) LerpBetweenSnapshots(syncedServerTime float64) {
 		return p.SnapshotsForInterp[i].Time < p.SnapshotsForInterp[j].Time
 	})
 
-	renderingTime := syncedServerTime - 0.2
+	renderingTime := syncedServerTime - constants.ServerBroadcastRate*2
 
 	if len(p.SnapshotsForInterp) < 2 {
+		// avoids jump when the player just starts moving
 		if len(p.SnapshotsForInterp) == 1 {
 			p.SnapshotsForInterp[0].Time = renderingTime
 		}
@@ -40,10 +42,9 @@ func (p *Player) LerpBetweenSnapshots(syncedServerTime float64) {
 	t0 := s0.Time
 	t1 := s1.Time
 
-	inBetween := t0 < renderingTime && renderingTime < t1
-	if !inBetween {
-		return
-	}
+	// if inBetween := t0 <= renderingTime && renderingTime <= t1; !inBetween {
+	// 	return
+	// }
 
 	t := (renderingTime - t0) / (t1 - t0)
 
