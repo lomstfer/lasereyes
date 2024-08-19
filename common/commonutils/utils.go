@@ -38,6 +38,6 @@ func ByteArrayToUint(b []byte) uint {
 	}
 }
 
-func GetCurrentTimeAsFloat() float64 {
+func GetUnixTimeAsFloat() float64 {
 	return float64(time.Now().UnixNano()) / 1000000000.0
 }

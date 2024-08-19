@@ -26,13 +26,13 @@ func main() {
 	simulationCallback := common.NewFixedCallback(constants.SimulationTickRate)
 	broadcastGameCallback := common.NewFixedCallback(constants.ServerBroadcastRate)
 
-	startedTime := commonutils.GetCurrentTimeAsFloat()
+	startedTime := commonutils.GetUnixTimeAsFloat()
 
 	var li int32 = 0
 
 	go func() {
 		for {
-			serverTime := commonutils.GetCurrentTimeAsFloat() - startedTime
+			serverTime := commonutils.GetUnixTimeAsFloat() - startedTime
 
 			eventPeerId, eventStruct := netServer.CheckForEvents()
 			switch msg := eventStruct.(type) {

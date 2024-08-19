@@ -37,5 +37,5 @@ func (ts *TimeSyncer) OnTimeAnswer(currentTime float64, timeSentFromClient float
 }
 
 func (ts *TimeSyncer) ServerTime() float64 {
-	return commonutils.GetCurrentTimeAsFloat() - ts.timeDiff
+	return commonutils.GetUnixTimeAsFloat() - ts.timeDiff
 }

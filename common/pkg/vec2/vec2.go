@@ -49,7 +49,7 @@ func (v Vec2) Length() float64 {
 	return math.Sqrt(v.X*v.X + v.Y*v.Y)
 }
 
-func (v Vec2) SqrLength() float64 {
+func (v Vec2) LengthSquared() float64 {
 	return v.X*v.X + v.Y*v.Y
 }
 
