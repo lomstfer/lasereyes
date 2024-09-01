@@ -18,6 +18,6 @@ func SimulateInput(playerData *CommonData, input Input, deltaTime float64) {
 	if input.Right {
 		inputVec.X += 1
 	}
-	inputVec = inputVec.Normalized().Mul(200 * deltaTime)
+	inputVec = inputVec. /* .Normalized() */ Mul(100 * deltaTime)
 	playerData.Position = playerData.Position.Add(inputVec)
 }

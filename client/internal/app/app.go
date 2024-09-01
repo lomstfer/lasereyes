@@ -173,6 +173,7 @@ func (a *App) handleNetworkEvents() {
 			if id == a.selfPlayer.Data.Id {
 				continue
 			}
+			snapshot.Time = a.timeSyncer.ServerTime()
 			a.otherPlayers[id].SnapshotsForInterp = append(a.otherPlayers[id].SnapshotsForInterp, snapshot)
 		}
 

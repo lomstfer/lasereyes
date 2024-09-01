@@ -28,8 +28,6 @@ func main() {
 
 	startedTime := commonutils.GetUnixTimeAsFloat()
 
-	var li int32 = 0
-
 	go func() {
 		for {
 			serverTime := commonutils.GetUnixTimeAsFloat() - startedTime
@@ -75,7 +73,7 @@ func main() {
 			}
 
 			simulationCallback.Update(func() {
-				gameServer.Simulate(1.0/60.0, serverTime)
+				gameServer.Simulate(constants.SimulationTickRate, serverTime)
 			})
 
 			broadcastGameCallback.Update(func() {
@@ -95,8 +93,7 @@ func main() {
 					delete(gameServer.PlayersThatMoved, k)
 				}
 
-				s := msgfromserver.UpdatePlayers{IdsToSnapshots: playersToUpdate, Id: li}
-				li += 1
+				s := msgfromserver.UpdatePlayers{IdsToSnapshots: playersToUpdate}
 				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdatePlayers), s)
 				netServer.SendToAll(bytes, false)
 			})

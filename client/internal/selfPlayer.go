@@ -50,10 +50,19 @@ func (sp *SelfPlayer) OnSendInputs() {
 	sp.InputsToSend = sp.InputsToSend[:0]
 }
 
+// client accumulates inputs and updates its position, stores the inputs that have only been simulated on client
+// client sends inputs
+// server updates clients position and sends last updated id and position
+// client checks its array of inputs only simulated on client and removes the ones less than or equal to the id from the server
+// client sets its position to the server position
+
 func (sp *SelfPlayer) HandleServerUpdate(lastAuthorizedInputId uint32, snapshot player.Snapshot) {
 	for i, inp := range sp.unauthorizedInputs {
-		if inp.Id >= lastAuthorizedInputId {
+		if inp.Id == lastAuthorizedInputId {
 			sp.unauthorizedInputs = sp.unauthorizedInputs[i+1:]
+			break
+		} else if inp.Id > lastAuthorizedInputId {
+			sp.unauthorizedInputs = sp.unauthorizedInputs[i:]
 			break
 		}
 	}
@@ -62,6 +71,7 @@ func (sp *SelfPlayer) HandleServerUpdate(lastAuthorizedInputId uint32, snapshot 
 	for _, inp := range sp.unauthorizedInputs {
 		player.SimulateInput(&sp.Data, inp, constants.SimulationTickRate)
 	}
+
 }
 
 func (sp *SelfPlayer) UpdateRenderPosition(alpha float64) {
