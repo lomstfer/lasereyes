@@ -46,6 +46,8 @@ type App struct {
 	selfPlayer   *internal.SelfPlayer
 	otherPlayers map[uint]*internal.Player
 	playerImage  *ebiten.Image
+
+	backgroundImage *ebiten.Image
 }
 
 func NewApp(assetFS embed.FS) *App {
@@ -61,6 +63,23 @@ func NewApp(assetFS embed.FS) *App {
 	app.otherPlayers = make(map[uint]*internal.Player)
 	assetFS.ReadFile("embed_assets/dud.png")
 	app.playerImage = ebiten.NewImageFromImage(*utils.LoadImageInFs(assetFS, "embed_assets/dud.png"))
+
+	{
+		bgImg := ebiten.NewImage(30, 30)
+		dark := true
+		for y := range bgImg.Bounds().Dy() {
+			for x := range bgImg.Bounds().Dx() {
+				if dark {
+					bgImg.Set(x, y, color.NRGBA{20, 20, 20, 255})
+				} else {
+					bgImg.Set(x, y, color.NRGBA{60, 60, 60, 255})
+				}
+				dark = !dark
+			}
+			dark = !dark
+		}
+		app.backgroundImage = bgImg
+	}
 
 	app.netClient = network.NewNetworkClient()
 
@@ -173,7 +192,6 @@ func (a *App) handleNetworkEvents() {
 			if id == a.selfPlayer.Data.Id {
 				continue
 			}
-			snapshot.Time = a.timeSyncer.ServerTime()
 			a.otherPlayers[id].SnapshotsForInterp = append(a.otherPlayers[id].SnapshotsForInterp, snapshot)
 		}
 
@@ -189,6 +207,12 @@ func (a *App) draw(screen *ebiten.Image) {
 	if !a.finishedAssetLoading || !a.timeSyncer.FinishedSync {
 		screen.Fill(color.NRGBA{255, 0, 0, 255})
 		return
+	}
+
+	{
+		geo := ebiten.GeoM{}
+		geo.Scale(float64(screen.Bounds().Dx())/float64(a.backgroundImage.Bounds().Dx()), float64(screen.Bounds().Dy())/float64(a.backgroundImage.Bounds().Dy()))
+		screen.DrawImage(a.backgroundImage, &ebiten.DrawImageOptions{GeoM: geo})
 	}
 
 	text.Draw(screen, "hello", *a.fontFace, 0, 24, color.NRGBA{255, 255, 255, 255})
