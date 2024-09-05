@@ -8,8 +8,14 @@ type Player struct {
 	Data                  player.CommonData
 	QueuedInputs          []InputServerSide
 	LastAuthorizedInputId uint32
+	HistoryForRewind      []player.Snapshot
 }
 
 type InputServerSide struct {
-	Input player.Input
+	Input player.MoveInput
+}
+
+type PlayerCopyForRewind struct {
+	Data             player.CommonData
+	HistoryForRewind []player.Snapshot
 }

@@ -8,10 +8,10 @@ import (
 
 type SelfPlayer struct {
 	Data               player.CommonData
-	InputsToSend       []player.Input
+	InputsToSend       []player.MoveInput
 	OldPosition        vec2.Vec2
 	RenderPosition     vec2.Vec2
-	unauthorizedInputs []player.Input
+	unauthorizedInputs []player.MoveInput
 	inputIdCounter     uint32
 }
 
@@ -19,13 +19,13 @@ func NewSelfPlayer(data player.CommonData) *SelfPlayer {
 	sp := &SelfPlayer{Data: data}
 	sp.OldPosition = sp.Data.Position
 	sp.RenderPosition = sp.Data.Position
-	sp.InputsToSend = make([]player.Input, 0)
-	sp.unauthorizedInputs = make([]player.Input, 0)
+	sp.InputsToSend = make([]player.MoveInput, 0)
+	sp.unauthorizedInputs = make([]player.MoveInput, 0)
 	return sp
 }
 
 func (sp *SelfPlayer) CheckMoveInput(inputVec vec2.Vec2, localTime float64) {
-	input := player.Input{
+	input := player.MoveInput{
 		Up:    inputVec.Y == -1,
 		Down:  inputVec.Y == 1,
 		Left:  inputVec.X == -1,
@@ -37,13 +37,13 @@ func (sp *SelfPlayer) CheckMoveInput(inputVec vec2.Vec2, localTime float64) {
 	}
 }
 
-func (sp *SelfPlayer) AddInput(input player.Input) {
+func (sp *SelfPlayer) AddInput(input player.MoveInput) {
 	sp.inputIdCounter += 1
 	input.Id = sp.inputIdCounter
 	sp.unauthorizedInputs = append(sp.unauthorizedInputs, input)
 	sp.InputsToSend = append(sp.InputsToSend, input)
 
-	player.SimulateInput(&sp.Data, input, constants.SimulationTickRate)
+	player.SimulateInput(&sp.Data.Position, input, constants.SimulationTickRate)
 }
 
 func (sp *SelfPlayer) OnSendInputs() {
@@ -69,7 +69,7 @@ func (sp *SelfPlayer) HandleServerUpdate(lastAuthorizedInputId uint32, snapshot 
 	authorizedPosition := snapshot.Position
 	sp.Data.Position = authorizedPosition
 	for _, inp := range sp.unauthorizedInputs {
-		player.SimulateInput(&sp.Data, inp, constants.SimulationTickRate)
+		player.SimulateInput(&sp.Data.Position, inp, constants.SimulationTickRate)
 	}
 
 }

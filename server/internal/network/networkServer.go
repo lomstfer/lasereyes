@@ -61,8 +61,8 @@ func (ns *NetworkServer) CheckForEvents() (uint, interface{}) {
 			s := netmsg.GetStructFromBytes[msgfromclient.ConnectMe](bytes)
 			return peerId, s
 
-		case byte(msgfromclient.MsgTypeMoveInput):
-			s := netmsg.GetStructFromBytes[msgfromclient.MoveInput](bytes)
+		case byte(msgfromclient.MsgTypeInput):
+			s := netmsg.GetStructFromBytes[msgfromclient.Input](bytes)
 			return peerId, s
 
 		case byte(msgfromclient.MsgTypeTimeRequest):

@@ -1,6 +1,6 @@
 package player
 
-type Input struct {
+type MoveInput struct {
 	Id    uint32
 	Up    bool
 	Down  bool
@@ -8,6 +8,6 @@ type Input struct {
 	Right bool
 }
 
-func (i *Input) HasInput() bool {
+func (i *MoveInput) HasInput() bool {
 	return i.Up || i.Down || i.Left || i.Right
 }

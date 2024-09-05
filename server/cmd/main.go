@@ -63,8 +63,8 @@ func main() {
 			case network.ClientDisconnected:
 				gameServer.RemovePlayer(eventPeerId)
 
-			case msgfromclient.MoveInput:
-				gameServer.HandlePlayerInput(eventPeerId, msg.Input, serverTime)
+			case msgfromclient.Input:
+				gameServer.HandlePlayerInput(eventPeerId, serverTime, msg)
 
 			case msgfromclient.TimeRequest:
 				s := msgfromserver.TimeAnswer{Request: msg, TimeReceived: serverTime}

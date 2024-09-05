@@ -1,6 +1,6 @@
 package msgfromserver
 
-type MsgType int
+type MsgType byte
 
 const (
 	MsgTypeUndefined MsgType = iota

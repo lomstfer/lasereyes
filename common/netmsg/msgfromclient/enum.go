@@ -1,10 +1,10 @@
 package msgfromclient
 
-type MsgType int
+type MsgType byte
 
 const (
 	MsgTypeUndefined MsgType = iota
 	MsgTypeConnectMe
-	MsgTypeMoveInput
+	MsgTypeInput
 	MsgTypeTimeRequest
 )

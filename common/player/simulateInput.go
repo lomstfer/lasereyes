@@ -4,7 +4,7 @@ import (
 	"wzrds/common/pkg/vec2"
 )
 
-func SimulateInput(playerData *CommonData, input Input, deltaTime float64) {
+func SimulateInput(playerDataPosition *vec2.Vec2, input MoveInput, deltaTime float64) {
 	inputVec := vec2.NewVec2(0, 0)
 	if input.Up {
 		inputVec.Y -= 1
@@ -18,6 +18,6 @@ func SimulateInput(playerData *CommonData, input Input, deltaTime float64) {
 	if input.Right {
 		inputVec.X += 1
 	}
-	inputVec = inputVec. /* .Normalized() */ Mul(150 * deltaTime)
-	playerData.Position = playerData.Position.Add(inputVec)
+	inputVec = inputVec. /* .Normalized() */ Mul(40 * deltaTime)
+	*playerDataPosition = playerDataPosition.Add(inputVec)
 }

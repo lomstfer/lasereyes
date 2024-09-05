@@ -1,6 +1,7 @@
 package msgfromclient
 
 import (
+	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
 )
 
@@ -9,7 +10,16 @@ type ConnectMe struct {
 }
 
 type MoveInput struct {
-	Input []player.Input
+	MoveInputs []player.MoveInput
+}
+type ShootInput struct {
+	DidShoot bool
+	Time     float64
+	Position vec2.Vec2
+}
+type Input struct {
+	Shoot ShootInput
+	Move  MoveInput
 }
 
 type TimeRequest struct {

@@ -20,6 +20,7 @@ import (
 	"wzrds/common/player"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
 )
@@ -48,6 +49,8 @@ type App struct {
 	playerImage  *ebiten.Image
 
 	backgroundImage *ebiten.Image
+
+	bufferedShootInput *vec2.Vec2
 }
 
 func NewApp(assetFS embed.FS) *App {
@@ -112,6 +115,11 @@ func (a *App) Update(screen *ebiten.Image) {
 	a.lastUpdateLocalTime = localTime
 
 	if a.selfPlayer != nil {
+		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) && a.bufferedShootInput == nil {
+			mx, my := ebiten.CursorPosition()
+			a.bufferedShootInput = &vec2.Vec2{X: float64(mx), Y: float64(my)}
+		}
+
 		a.getInputCallback.Update(func() {
 			inputVec := vec2.Vec2{}
 			if ebiten.IsKeyPressed(ebiten.KeyW) {
@@ -130,8 +138,15 @@ func (a *App) Update(screen *ebiten.Image) {
 		})
 
 		a.sendInputCallback.Update(func() {
-			packetStruct := msgfromclient.MoveInput{Input: a.selfPlayer.InputsToSend}
-			bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeMoveInput), packetStruct)
+			move := msgfromclient.MoveInput{MoveInputs: a.selfPlayer.InputsToSend}
+			shoot := msgfromclient.ShootInput{Time: a.timeSyncer.ServerTime()}
+			if a.bufferedShootInput != nil {
+				shoot.DidShoot = true
+				shoot.Position = *a.bufferedShootInput
+			}
+			a.bufferedShootInput = nil
+			packetStruct := msgfromclient.Input{Move: move, Shoot: shoot}
+			bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeInput), packetStruct)
 			a.netClient.SendToServer(bytes, true)
 			a.selfPlayer.OnSendInputs()
 		})
