@@ -20,7 +20,7 @@ func NewNetworkServer() *NetworkServer {
 	ns := &NetworkServer{}
 
 	var err error
-	ns.enetServerHost, err = enet.NewHost(enet.NewListenAddress(8095), 32, 1, 0, 0)
+	ns.enetServerHost, err = enet.NewHost(enet.NewListenAddress(5005), 32, 1, 0, 0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

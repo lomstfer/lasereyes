@@ -6,12 +6,13 @@ import (
 	"syscall"
 	"time"
 	"wzrds/common"
+	"wzrds/common/commonconstants"
 	"wzrds/common/commonutils"
-	"wzrds/common/constants"
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/netmsg/msgfromserver"
 	"wzrds/common/player"
+	"wzrds/server/constants"
 	"wzrds/server/internal"
 	"wzrds/server/internal/network"
 )
@@ -23,8 +24,8 @@ func main() {
 	netServer := network.NewNetworkServer()
 	gameServer := internal.NewGameServer()
 
-	simulationCallback := common.NewFixedCallback(constants.SimulationTickRate)
-	broadcastGameCallback := common.NewFixedCallback(constants.ServerBroadcastRate)
+	simulationCallback := common.NewFixedCallback(commonconstants.SimulationTickRate)
+	broadcastGameCallback := common.NewFixedCallback(commonconstants.ServerBroadcastRate)
 
 	startedTime := commonutils.GetUnixTimeAsFloat()
 
@@ -35,7 +36,11 @@ func main() {
 			eventPeerId, eventStruct := netServer.CheckForEvents()
 			switch msg := eventStruct.(type) {
 			case msgfromclient.ConnectMe:
-				newPlayerData := player.CommonData{Name: msg.Name, Id: eventPeerId}
+				newPlayerData := player.CommonData{
+					Name:   msg.Name,
+					Id:     eventPeerId,
+					Health: 100,
+				}
 
 				// add new player to new player
 				{
@@ -62,9 +67,19 @@ func main() {
 
 			case network.ClientDisconnected:
 				gameServer.RemovePlayer(eventPeerId)
+				removeOtherStruct := msgfromserver.RemoveOtherPlayer{Id: eventPeerId}
+				removeOtherBytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeRemoveOtherPlayer), removeOtherStruct)
+				netServer.SendToAll(removeOtherBytes, true)
 
 			case msgfromclient.Input:
-				gameServer.HandlePlayerInput(eventPeerId, serverTime, msg)
+				inputOutcome := gameServer.HandlePlayerInput(eventPeerId, serverTime, msg)
+				if inputOutcome != nil && inputOutcome.SomeoneWasShot {
+					for _, id := range inputOutcome.WereShotIds {
+						packetStruct := msgfromserver.PlayerTakeDamage{PlayerId: id, Damage: constants.Damage}
+						packetBytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypePlayerTakeDamage), packetStruct)
+						netServer.SendToAll(packetBytes, true)
+					}
+				}
 
 			case msgfromclient.TimeRequest:
 				s := msgfromserver.TimeAnswer{Request: msg, TimeReceived: serverTime}
@@ -73,7 +88,7 @@ func main() {
 			}
 
 			simulationCallback.Update(func() {
-				gameServer.Simulate(constants.SimulationTickRate, serverTime)
+				gameServer.Simulate(commonconstants.SimulationTickRate, serverTime)
 			})
 
 			broadcastGameCallback.Update(func() {

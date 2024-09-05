@@ -28,7 +28,7 @@ func NewNetworkClient() *NetworkClient {
 		os.Exit(1)
 	}
 
-	nc.enetServerPeer, err = nc.enetClientHost.Connect(enet.NewAddress("127.0.0.1", 8095), 1, 0)
+	nc.enetServerPeer, err = nc.enetClientHost.Connect(enet.NewAddress("127.0.0.1", 5005), 1, 0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -68,6 +68,9 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 		case byte(msgfromserver.MsgTypeAddOtherPlayer):
 			s := netmsg.GetStructFromBytes[msgfromserver.AddOtherPlayer](bytes)
 			return s
+		case byte(msgfromserver.MsgTypeRemoveOtherPlayer):
+			s := netmsg.GetStructFromBytes[msgfromserver.RemoveOtherPlayer](bytes)
+			return s
 		case byte(msgfromserver.MsgTypeUpdatePlayers):
 			s := netmsg.GetStructFromBytes[msgfromserver.UpdatePlayers](bytes)
 			return s
@@ -76,6 +79,9 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 			return s
 		case byte(msgfromserver.MsgTypeTimeAnswer):
 			s := netmsg.GetStructFromBytes[msgfromserver.TimeAnswer](bytes)
+			return s
+		case byte(msgfromserver.MsgTypePlayerTakeDamage):
+			s := netmsg.GetStructFromBytes[msgfromserver.PlayerTakeDamage](bytes)
 			return s
 		}
 		return nil

@@ -11,8 +11,8 @@ import (
 	"wzrds/client/internal/network"
 	"wzrds/client/pkg/utils"
 	"wzrds/common"
+	commonconstants "wzrds/common/commonconstants"
 	commonutils "wzrds/common/commonutils"
-	commonconstants "wzrds/common/constants"
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/netmsg/msgfromserver"
@@ -44,9 +44,11 @@ type App struct {
 	getInputCallback  *common.FixedCallback
 	sendInputCallback *common.FixedCallback
 
-	selfPlayer   *internal.SelfPlayer
-	otherPlayers map[uint]*internal.Player
-	playerImage  *ebiten.Image
+	selfPlayer             *internal.SelfPlayer
+	otherPlayers           map[uint]*internal.Player
+	playerImage            *ebiten.Image
+	playerHealthBarBgImage *ebiten.Image
+	playerHealthBarFgImage *ebiten.Image
 
 	backgroundImage *ebiten.Image
 
@@ -66,6 +68,10 @@ func NewApp(assetFS embed.FS) *App {
 	app.otherPlayers = make(map[uint]*internal.Player)
 	assetFS.ReadFile("embed_assets/dud.png")
 	app.playerImage = ebiten.NewImageFromImage(*utils.LoadImageInFs(assetFS, "embed_assets/dud.png"))
+	app.playerHealthBarBgImage = ebiten.NewImage(1, 1)
+	app.playerHealthBarBgImage.Fill(color.NRGBA{255, 255, 255, 255})
+	app.playerHealthBarFgImage = ebiten.NewImage(1, 1)
+	app.playerHealthBarFgImage.Fill(color.NRGBA{255, 0, 0, 255})
 
 	{
 		bgImg := ebiten.NewImage(30, 30)
@@ -134,10 +140,15 @@ func (a *App) Update(screen *ebiten.Image) {
 			if ebiten.IsKeyPressed(ebiten.KeyD) {
 				inputVec.X += 1
 			}
-			a.selfPlayer.CheckMoveInput(inputVec, localTime)
+			if !a.selfPlayer.Data.Dead {
+				a.selfPlayer.CheckMoveInput(inputVec, localTime)
+			}
 		})
 
 		a.sendInputCallback.Update(func() {
+			if a.selfPlayer.Data.Dead {
+				return
+			}
 			move := msgfromclient.MoveInput{MoveInputs: a.selfPlayer.InputsToSend}
 			shoot := msgfromclient.ShootInput{Time: a.timeSyncer.ServerTime()}
 			if a.bufferedShootInput != nil {
@@ -199,6 +210,9 @@ func (a *App) handleNetworkEvents() {
 	case msgfromserver.AddSelfPlayer:
 		a.selfPlayer = internal.NewSelfPlayer(msg.Data)
 
+	case msgfromserver.RemoveOtherPlayer:
+		delete(a.otherPlayers, msg.Id)
+
 	case msgfromserver.AddOtherPlayer:
 		a.otherPlayers[msg.Data.Id] = &internal.Player{Data: msg.Data}
 
@@ -215,12 +229,25 @@ func (a *App) handleNetworkEvents() {
 
 	case msgfromserver.TimeAnswer:
 		a.timeSyncer.OnTimeAnswer(commonutils.GetUnixTimeAsFloat(), msg.Request.TimeSent, msg.TimeReceived)
+
+	case msgfromserver.PlayerTakeDamage:
+		var pd *player.CommonData
+		if msg.PlayerId == a.selfPlayer.Data.Id {
+			pd = &a.selfPlayer.Data
+		} else {
+			pd = &a.otherPlayers[msg.PlayerId].Data
+		}
+		pd.Health -= msg.Damage
+		if pd.Health <= 0 {
+			pd.Dead = true
+		}
 	}
 }
 
 func (a *App) draw(screen *ebiten.Image) {
 	if !a.finishedAssetLoading || !a.timeSyncer.FinishedSync {
-		screen.Fill(color.NRGBA{255, 0, 0, 255})
+		screen.Fill(color.NRGBA{100, 100, 100, 255})
+		text.Draw(screen, "connecting", *a.fontFace, 0, 24, color.NRGBA{255, 255, 255, 255})
 		return
 	}
 
@@ -230,20 +257,14 @@ func (a *App) draw(screen *ebiten.Image) {
 		screen.DrawImage(a.backgroundImage, &ebiten.DrawImageOptions{GeoM: geo})
 	}
 
-	text.Draw(screen, "hello", *a.fontFace, 0, 24, color.NRGBA{255, 255, 255, 255})
-	{
-		selfDataToRender := a.selfPlayer.Data
-		selfDataToRender.Position = a.selfPlayer.RenderPosition
-		drawPlayer(screen, a.playerImage, selfDataToRender)
-	}
+	selfDataToRender := a.selfPlayer.Data
+	selfDataToRender.Position = a.selfPlayer.RenderPosition
+	internal.DrawPlayer(selfDataToRender, screen, a.playerImage)
 	for _, p := range a.otherPlayers {
-		drawPlayer(screen, a.playerImage, p.Data)
+		internal.DrawPlayer(p.Data, screen, a.playerImage)
 	}
-}
-
-func drawPlayer(screen *ebiten.Image, playerImage *ebiten.Image, pData player.CommonData) {
-	geo := ebiten.GeoM{}
-	geo.Scale(3, 3)
-	geo.Translate(pData.Position.X, pData.Position.Y)
-	screen.DrawImage(playerImage, &ebiten.DrawImageOptions{GeoM: geo})
+	internal.DrawPlayerHealthBar(selfDataToRender, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage)
+	for _, p := range a.otherPlayers {
+		internal.DrawPlayerHealthBar(p.Data, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage)
+	}
 }

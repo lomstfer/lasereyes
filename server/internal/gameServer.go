@@ -2,15 +2,22 @@ package internal
 
 import (
 	"fmt"
-	"wzrds/common/constants"
+	"wzrds/common/commonconstants"
 	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
+	"wzrds/server/constants"
 )
 
 type GameServer struct {
 	Players          map[uint]*Player
 	PlayersThatMoved map[uint]bool
+}
+
+type PlayerInputOutcome struct {
+	SomeoneWasShot bool
+	ShooterId      uint
+	WereShotIds    []uint
 }
 
 func NewGameServer() *GameServer {
@@ -29,8 +36,11 @@ func (gs *GameServer) RemovePlayer(id uint) {
 	delete(gs.Players, id)
 }
 
-func (gs *GameServer) HandlePlayerInput(playerId uint, serverTimeNow float64, input msgfromclient.Input) {
+func (gs *GameServer) HandlePlayerInput(playerId uint, serverTimeNow float64, input msgfromclient.Input) *PlayerInputOutcome {
 	p := gs.Players[playerId]
+	if p.Data.Dead {
+		return nil
+	}
 	for _, i := range input.Move.MoveInputs {
 		if i.HasInput() {
 			p.QueuedInputs = append(p.QueuedInputs, InputServerSide{Input: i})
@@ -42,20 +52,25 @@ func (gs *GameServer) HandlePlayerInput(playerId uint, serverTimeNow float64, in
 	// })
 
 	if !input.Shoot.DidShoot {
-		return
+		return nil
 	}
 	playerPositionCopy := p.Data.Position
 	for _, i := range input.Move.MoveInputs {
 		if i.HasInput() {
-			player.SimulateInput(&playerPositionCopy, i, constants.SimulationTickRate)
+			player.SimulateInput(&playerPositionCopy, i, commonconstants.SimulationTickRate)
 		}
 	}
 	// playerPositionCopy is now what the client saw
 
 	// todo: check radius from shoot position to client player
 
+	outcome := &PlayerInputOutcome{
+		ShooterId:   playerId,
+		WereShotIds: make([]uint, 0),
+	}
+
 	// rewind other players (constants.ServerBroadcastRate * 2 == interpolation rewind)
-	timeOfClientView := input.Shoot.Time - constants.ServerBroadcastRate*2
+	timeOfClientView := input.Shoot.Time - commonconstants.ServerBroadcastRate*2
 	for _, pOrg := range gs.Players {
 		// dont let you shoot yourself
 		if pOrg.Data.Id == playerId {
@@ -78,19 +93,26 @@ func (gs *GameServer) HandlePlayerInput(playerId uint, serverTimeNow float64, in
 
 		shootPos := input.Shoot.Position
 		pPos := pCop.Data.Position
-		if shootPos.X >= pPos.X && shootPos.X <= pPos.X+constants.PlayerWidthAndHeight &&
-			shootPos.Y >= pPos.Y && shootPos.Y <= pPos.Y+constants.PlayerWidthAndHeight {
+		if shootPos.X >= pPos.X && shootPos.X <= pPos.X+commonconstants.PlayerWidthAndHeight &&
+			shootPos.Y >= pPos.Y && shootPos.Y <= pPos.Y+commonconstants.PlayerWidthAndHeight {
 			gs.PlayerWasShot(pCop.Data.Id, playerId)
+			outcome.SomeoneWasShot = true
+			outcome.WereShotIds = append(outcome.WereShotIds, pCop.Data.Id)
 		}
 	}
+
+	return outcome
 }
 
 func (gs *GameServer) Simulate(deltaTime float64, serverTime float64) {
 	for _, p := range gs.Players {
+		if p.Data.Dead {
+			continue
+		}
 		p.HistoryForRewind = append(p.HistoryForRewind, player.Snapshot{Time: serverTime, Position: p.Data.Position})
 		{
 			i := 0
-			for serverTime-p.HistoryForRewind[i].Time > constants.ServerBroadcastRate*2*10 {
+			for serverTime-p.HistoryForRewind[i].Time > commonconstants.ServerBroadcastRate*2*10 {
 				i += 1
 			}
 			p.HistoryForRewind = p.HistoryForRewind[i:]
@@ -108,4 +130,9 @@ func (gs *GameServer) Simulate(deltaTime float64, serverTime float64) {
 
 func (gs *GameServer) PlayerWasShot(wasShot uint, shooter uint) {
 	fmt.Println(wasShot, "was shot by:", shooter)
+	p := gs.Players[wasShot]
+	p.Data.Health -= constants.Damage
+	if p.Data.Health <= 0 {
+		p.Data.Dead = true
+	}
 }

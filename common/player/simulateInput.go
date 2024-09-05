@@ -18,6 +18,6 @@ func SimulateInput(playerDataPosition *vec2.Vec2, input MoveInput, deltaTime flo
 	if input.Right {
 		inputVec.X += 1
 	}
-	inputVec = inputVec. /* .Normalized() */ Mul(40 * deltaTime)
+	inputVec = inputVec. /* .Normalized() */ Mul(150 * deltaTime)
 	*playerDataPosition = playerDataPosition.Add(inputVec)
 }

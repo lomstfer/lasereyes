@@ -1,1 +1,6 @@
-players sometimes ending up a little behind when using "playersThatMoved" (i.e. sending only the players that just got simulated)
+* shoot cooldown
+* objects blocking shooting
+* shoot effects
+
+problems:
+    *players sometimes ending up a little behind when using "playersThatMoved" (i.e. sending only the players that just got simulated)

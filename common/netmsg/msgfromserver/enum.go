@@ -7,7 +7,9 @@ const (
 	MsgTypeDisconnectedClient
 	MsgTypeAddSelfPlayer
 	MsgTypeAddOtherPlayer
+	MsgTypeRemoveOtherPlayer
 	MsgTypeUpdatePlayers
 	MsgTypeUpdateSelf
 	MsgTypeTimeAnswer
+	MsgTypePlayerTakeDamage
 )

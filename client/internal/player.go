@@ -2,10 +2,48 @@ package internal
 
 import (
 	"sort"
-	"wzrds/common/constants"
+	"wzrds/common/commonconstants"
 	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
+
+	"github.com/hajimehoshi/ebiten/v2"
 )
+
+func DrawPlayer(data player.CommonData, screen *ebiten.Image, playerImage *ebiten.Image) {
+	geo := ebiten.GeoM{}
+	geo.Scale(3, 3)
+	colorScale := ebiten.ColorScale{}
+	if data.Dead {
+		colorScale.Scale(0, 0, 0, 1)
+	}
+	geo.Translate(data.Position.X, data.Position.Y)
+	screen.DrawImage(playerImage, &ebiten.DrawImageOptions{GeoM: geo, ColorScale: colorScale})
+}
+
+func DrawPlayerHealthBar(data player.CommonData, screen *ebiten.Image, healthBarBg *ebiten.Image, healthBarFg *ebiten.Image) {
+	width := 60
+	height := 5
+	x := data.Position.X + commonconstants.PlayerWidthAndHeight/2 - float64(width)/2
+	y := data.Position.Y - 10
+	{
+		geo := ebiten.GeoM{}
+		geo.Scale(float64(width), float64(height))
+		geo.Translate(x, y)
+		screen.DrawImage(healthBarBg, &ebiten.DrawImageOptions{GeoM: geo})
+	}
+	{
+		geo := ebiten.GeoM{}
+		healthFraction := float64(data.Health) / 100
+		if healthFraction > 1 {
+			healthFraction = 1
+		} else if healthFraction < 0 {
+			healthFraction = 0
+		}
+		geo.Scale(healthFraction*float64(width), float64(height))
+		geo.Translate(x, y)
+		screen.DrawImage(healthBarFg, &ebiten.DrawImageOptions{GeoM: geo})
+	}
+}
 
 type Player struct {
 	Data               player.CommonData
@@ -17,7 +55,7 @@ func (p *Player) LerpBetweenSnapshots(syncedServerTime float64) {
 		return p.SnapshotsForInterp[i].Time < p.SnapshotsForInterp[j].Time
 	})
 
-	renderingTime := syncedServerTime - constants.ServerBroadcastRate*2
+	renderingTime := syncedServerTime - commonconstants.ServerBroadcastRate*2
 
 	if len(p.SnapshotsForInterp) < 2 {
 		// avoids jump when the player just starts moving
