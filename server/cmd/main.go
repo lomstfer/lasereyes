@@ -1,6 +1,8 @@
 package main
 
 import (
+	"image/color"
+	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
@@ -40,6 +42,7 @@ func main() {
 					Name:   msg.Name,
 					Id:     eventPeerId,
 					Health: 100,
+					Color:  color.NRGBA{uint8(rand.Intn(128) + 129), uint8(rand.Intn(128) + 129), uint8(rand.Intn(128) + 129), 255},
 				}
 
 				// add new player to new player

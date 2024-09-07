@@ -46,9 +46,10 @@ type App struct {
 
 	selfPlayer             *internal.SelfPlayer
 	otherPlayers           map[uint]*internal.Player
-	playerImage            *ebiten.Image
+	playerEyeImage         *ebiten.Image
 	playerHealthBarBgImage *ebiten.Image
 	playerHealthBarFgImage *ebiten.Image
+	playerPupilImage       *ebiten.Image
 
 	backgroundImage *ebiten.Image
 
@@ -66,8 +67,9 @@ func NewApp(assetFS embed.FS) *App {
 
 	app.sendInputCallback = common.NewFixedCallback(constants.SendInputRate)
 	app.otherPlayers = make(map[uint]*internal.Player)
-	assetFS.ReadFile("embed_assets/dud.png")
-	app.playerImage = ebiten.NewImageFromImage(*utils.LoadImageInFs(assetFS, "embed_assets/dud.png"))
+	app.playerEyeImage = ebiten.NewImageFromImage(*utils.LoadImageInFs(assetFS, "embed_assets/eye.png"))
+	app.playerPupilImage = ebiten.NewImageFromImage(*utils.LoadImageInFs(assetFS, "embed_assets/pupil.png"))
+
 	app.playerHealthBarBgImage = ebiten.NewImage(1, 1)
 	app.playerHealthBarBgImage.Fill(color.NRGBA{255, 255, 255, 255})
 	app.playerHealthBarFgImage = ebiten.NewImage(1, 1)
@@ -120,56 +122,70 @@ func (a *App) Update(screen *ebiten.Image) {
 	// dt := timeNow - g.lastUpdateTime
 	a.lastUpdateLocalTime = localTime
 
+	var mousePosition vec2.Vec2
+	{
+		mx, my := ebiten.CursorPosition()
+		mousePosition = vec2.Vec2{X: float64(mx), Y: float64(my)}
+	}
+
 	if a.selfPlayer != nil {
-		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) && a.bufferedShootInput == nil {
-			mx, my := ebiten.CursorPosition()
-			a.bufferedShootInput = &vec2.Vec2{X: float64(mx), Y: float64(my)}
-		}
-
-		a.getInputCallback.Update(func() {
-			inputVec := vec2.Vec2{}
-			if ebiten.IsKeyPressed(ebiten.KeyW) {
-				inputVec.Y -= 1
-			}
-			if ebiten.IsKeyPressed(ebiten.KeyS) {
-				inputVec.Y += 1
-			}
-			if ebiten.IsKeyPressed(ebiten.KeyA) {
-				inputVec.X -= 1
-			}
-			if ebiten.IsKeyPressed(ebiten.KeyD) {
-				inputVec.X += 1
-			}
-			if !a.selfPlayer.Data.Dead {
-				a.selfPlayer.CheckMoveInput(inputVec, localTime)
-			}
-		})
-
-		a.sendInputCallback.Update(func() {
-			if a.selfPlayer.Data.Dead {
-				return
-			}
-			move := msgfromclient.MoveInput{MoveInputs: a.selfPlayer.InputsToSend}
-			shoot := msgfromclient.ShootInput{Time: a.timeSyncer.ServerTime()}
-			if a.bufferedShootInput != nil {
-				shoot.DidShoot = true
-				shoot.Position = *a.bufferedShootInput
-			}
-			a.bufferedShootInput = nil
-			packetStruct := msgfromclient.Input{Move: move, Shoot: shoot}
-			bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeInput), packetStruct)
-			a.netClient.SendToServer(bytes, true)
-			a.selfPlayer.OnSendInputs()
-		})
-
-		for _, p := range a.otherPlayers {
-			p.LerpBetweenSnapshots(a.timeSyncer.ServerTime())
-		}
-
-		a.selfPlayer.UpdateRenderPosition(a.getInputCallback.Accumulator / a.getInputCallback.DeltaSeconds)
+		a.UpdateSelfPlayer(mousePosition)
+	}
+	for _, p := range a.otherPlayers {
+		p.LerpBetweenSnapshots(a.timeSyncer.ServerTime())
 	}
 
 	a.draw(screen)
+}
+
+func (a *App) UpdateSelfPlayer(mousePosition vec2.Vec2) {
+	if a.selfPlayer.Data.Dead {
+		return
+	}
+
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) && a.bufferedShootInput == nil {
+		a.bufferedShootInput = &vec2.Vec2{X: mousePosition.X, Y: mousePosition.Y}
+	}
+
+	a.getInputCallback.Update(func() {
+		inputVec := vec2.Vec2{}
+		if ebiten.IsKeyPressed(ebiten.KeyW) {
+			inputVec.Y -= 1
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyS) {
+			inputVec.Y += 1
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyA) {
+			inputVec.X -= 1
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyD) {
+			inputVec.X += 1
+		}
+		if !a.selfPlayer.Data.Dead {
+			a.selfPlayer.CheckMoveInput(inputVec)
+		}
+	})
+
+	a.sendInputCallback.Update(func() {
+		if a.selfPlayer.Data.Dead {
+			return
+		}
+		move := msgfromclient.MoveInput{MoveInputs: a.selfPlayer.InputsToSend}
+		shoot := msgfromclient.ShootInput{Time: a.timeSyncer.ServerTime()}
+		if a.bufferedShootInput != nil {
+			shoot.DidShoot = true
+			shoot.Position = *a.bufferedShootInput
+		}
+		a.bufferedShootInput = nil
+		packetStruct := msgfromclient.Input{Move: move, Shoot: shoot}
+		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeInput), packetStruct)
+		a.netClient.SendToServer(bytes, true)
+		a.selfPlayer.OnSendInputs()
+	})
+
+	a.selfPlayer.UpdateRenderPosition(a.getInputCallback.Accumulator / a.getInputCallback.DeltaSeconds)
+
+	a.selfPlayer.CalculateFacingVec(mousePosition)
 }
 
 func (g *App) loadAssets(assetFS embed.FS) {
@@ -257,14 +273,17 @@ func (a *App) draw(screen *ebiten.Image) {
 		screen.DrawImage(a.backgroundImage, &ebiten.DrawImageOptions{GeoM: geo})
 	}
 
+	for _, p := range a.otherPlayers {
+		internal.DrawPlayer(p.Data, screen, a.playerEyeImage, a.playerPupilImage)
+	}
 	selfDataToRender := a.selfPlayer.Data
 	selfDataToRender.Position = a.selfPlayer.RenderPosition
-	internal.DrawPlayer(selfDataToRender, screen, a.playerImage)
-	for _, p := range a.otherPlayers {
-		internal.DrawPlayer(p.Data, screen, a.playerImage)
-	}
-	internal.DrawPlayerHealthBar(selfDataToRender, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage)
+	internal.DrawPlayer(selfDataToRender, screen, a.playerEyeImage, a.playerPupilImage)
+
+	// ui stuff
+
 	for _, p := range a.otherPlayers {
 		internal.DrawPlayerHealthBar(p.Data, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage)
 	}
+	internal.DrawPlayerHealthBar(selfDataToRender, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage)
 }

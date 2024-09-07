@@ -24,7 +24,11 @@ func NewSelfPlayer(data player.CommonData) *SelfPlayer {
 	return sp
 }
 
-func (sp *SelfPlayer) CheckMoveInput(inputVec vec2.Vec2, localTime float64) {
+func (sp *SelfPlayer) CalculateFacingVec(mousePosition vec2.Vec2) {
+	sp.Data.FacingTowardsRelative = mousePosition.Sub(sp.RenderPosition.Add(vec2.NewVec2Both(commonconstants.PlayerSize / 2.0)))
+}
+
+func (sp *SelfPlayer) CheckMoveInput(inputVec vec2.Vec2) {
 	input := player.MoveInput{
 		Up:    inputVec.Y == -1,
 		Down:  inputVec.Y == 1,

@@ -1,6 +1,9 @@
+no specific order
 * shoot cooldown
-* objects blocking shooting
+* objects that block shooting
 * shoot effects
+* client side prediction of shooting (have ids on shoot/damage packets)
+* aim (direction that you are watching) shared
 
 problems:
     *players sometimes ending up a little behind when using "playersThatMoved" (i.e. sending only the players that just got simulated)

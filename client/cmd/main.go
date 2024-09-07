@@ -10,12 +10,13 @@ import (
 )
 
 //go:embed embed_assets/Roboto-Regular.ttf
-//go:embed embed_assets/dud.png
+//go:embed embed_assets/eye.png
+//go:embed embed_assets/pupil.png
 var assetFS embed.FS
 
 func main() {
 	ebiten.SetWindowSize(640, 360)
-	ebiten.SetWindowTitle("pocketino")
+	ebiten.SetWindowTitle("")
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowClosingHandled(true)
 	ebiten.SetTPS(ebiten.SyncWithFPS)
@@ -43,5 +44,5 @@ func (eg *EbitenGame) Draw(screen *ebiten.Image) {
 }
 
 func (g *EbitenGame) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 500, 500
+	return 800, 800
 }

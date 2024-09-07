@@ -92,9 +92,10 @@ func (gs *GameServer) HandlePlayerInput(playerId uint, serverTimeNow float64, in
 		}
 
 		shootPos := input.Shoot.Position
-		pPos := pCop.Data.Position
-		if shootPos.X >= pPos.X && shootPos.X <= pPos.X+commonconstants.PlayerWidthAndHeight &&
-			shootPos.Y >= pPos.Y && shootPos.Y <= pPos.Y+commonconstants.PlayerWidthAndHeight {
+		pRectMin := pCop.Data.Position.Sub(vec2.NewVec2Both(commonconstants.PlayerSize / 2.0))
+		pRectMax := pCop.Data.Position.Add(vec2.NewVec2Both(commonconstants.PlayerSize / 2.0))
+		if shootPos.X >= pRectMin.X && shootPos.X <= pRectMax.X &&
+			shootPos.Y >= pRectMin.Y && shootPos.Y <= pRectMax.Y {
 			gs.PlayerWasShot(pCop.Data.Id, playerId)
 			outcome.SomeoneWasShot = true
 			outcome.WereShotIds = append(outcome.WereShotIds, pCop.Data.Id)

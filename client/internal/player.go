@@ -1,7 +1,9 @@
 package internal
 
 import (
+	"image/color"
 	"sort"
+	"wzrds/client/internal/constants"
 	"wzrds/common/commonconstants"
 	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
@@ -9,22 +11,40 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-func DrawPlayer(data player.CommonData, screen *ebiten.Image, playerImage *ebiten.Image) {
+func DrawPlayer(data player.CommonData, screen *ebiten.Image, eyeImage *ebiten.Image, pupilImage *ebiten.Image) {
 	geo := ebiten.GeoM{}
-	geo.Scale(3, 3)
+	geo.Scale(commonconstants.PixelScale, commonconstants.PixelScale)
+
+	pos := data.Position.Sub(vec2.NewVec2Both(commonconstants.PlayerSize / 2.0))
+	geo.Translate(pos.X, pos.Y)
+
 	colorScale := ebiten.ColorScale{}
 	if data.Dead {
-		colorScale.Scale(0, 0, 0, 1)
+		colorScale.ScaleWithColor(color.NRGBA{150, 100, 0, 255})
 	}
-	geo.Translate(data.Position.X, data.Position.Y)
-	screen.DrawImage(playerImage, &ebiten.DrawImageOptions{GeoM: geo, ColorScale: colorScale})
+	screen.DrawImage(eyeImage, &ebiten.DrawImageOptions{GeoM: geo, ColorScale: colorScale})
+
+	drawPlayerPupil(data, screen, pupilImage, colorScale)
+}
+
+func drawPlayerPupil(data player.CommonData, screen *ebiten.Image, pupilImage *ebiten.Image, colorScale ebiten.ColorScale) {
+	geo := ebiten.GeoM{}
+	geo.Scale(commonconstants.PixelScale, commonconstants.PixelScale)
+	colorScale.ScaleWithColor(data.Color)
+
+	pupilPosCentered := data.Position.Sub(vec2.NewVec2Both(constants.PupilSize / 2.0))
+	facingScaled := data.FacingTowardsRelative.Div(100).LengthClamped(0, 1)
+	pos := pupilPosCentered.Add(facingScaled.Mul(constants.PupilMaxDistanceFromEye))
+	geo.Translate(pos.X, pos.Y)
+
+	screen.DrawImage(pupilImage, &ebiten.DrawImageOptions{GeoM: geo, ColorScale: colorScale})
 }
 
 func DrawPlayerHealthBar(data player.CommonData, screen *ebiten.Image, healthBarBg *ebiten.Image, healthBarFg *ebiten.Image) {
 	width := 60
 	height := 5
-	x := data.Position.X + commonconstants.PlayerWidthAndHeight/2 - float64(width)/2
-	y := data.Position.Y - 10
+	x := data.Position.X - float64(width)/2
+	y := data.Position.Y - commonconstants.PlayerSize/2.0 - 10
 	{
 		geo := ebiten.GeoM{}
 		geo.Scale(float64(width), float64(height))

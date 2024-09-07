@@ -1,6 +1,7 @@
 package player
 
 import (
+	"wzrds/common/commonconstants"
 	"wzrds/common/pkg/vec2"
 )
 
@@ -18,6 +19,6 @@ func SimulateInput(playerDataPosition *vec2.Vec2, input MoveInput, deltaTime flo
 	if input.Right {
 		inputVec.X += 1
 	}
-	inputVec = inputVec. /* .Normalized() */ Mul(150 * deltaTime)
+	inputVec = inputVec. /* .Normalized() */ Mul(commonconstants.PlayerSpeed * deltaTime)
 	*playerDataPosition = playerDataPosition.Add(inputVec)
 }
