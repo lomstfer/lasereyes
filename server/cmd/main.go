@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"math/rand"
 	"os"
@@ -28,6 +29,7 @@ func main() {
 
 	simulationCallback := common.NewFixedCallback(commonconstants.SimulationTickRate)
 	broadcastGameCallback := common.NewFixedCallback(commonconstants.ServerBroadcastRate)
+	broadcastGameFallbackCallback := common.NewFixedCallback(commonconstants.ServerBroadcastRate * 10)
 
 	startedTime := commonutils.GetUnixTimeAsFloat()
 
@@ -84,6 +86,9 @@ func main() {
 					}
 				}
 
+			case msgfromclient.UpdateFacingDirection:
+				gameServer.HandlePlayerUpdateFacingDir(eventPeerId, msg.Dir)
+
 			case msgfromclient.TimeRequest:
 				s := msgfromserver.TimeAnswer{Request: msg, TimeReceived: serverTime}
 				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeTimeAnswer), s)
@@ -96,9 +101,13 @@ func main() {
 
 			broadcastGameCallback.Update(func() {
 				playersToUpdate := make(map[uint]player.Snapshot, 0)
-				for id := range gameServer.Players {
+				for id := range gameServer.PlayersThatMoved {
 					p := gameServer.Players[id]
-					snapshot := player.Snapshot{Time: serverTime, Position: p.Data.Position}
+					if p == nil {
+						fmt.Println("player was nil")
+						continue
+					}
+					snapshot := player.Snapshot{Time: serverTime, Position: p.Data.Position, PupilDistDir01: p.Data.PupilDistDir01}
 					playersToUpdate[id] = snapshot
 
 					{
@@ -111,6 +120,29 @@ func main() {
 					delete(gameServer.PlayersThatMoved, k)
 				}
 
+				if len(playersToUpdate) == 0 {
+					return
+				}
+				s := msgfromserver.UpdatePlayers{IdsToSnapshots: playersToUpdate}
+				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdatePlayers), s)
+				netServer.SendToAll(bytes, false)
+			})
+
+			broadcastGameFallbackCallback.Update(func() {
+				playersToUpdate := make(map[uint]player.Snapshot, 0)
+				for id, p := range gameServer.Players {
+					snapshot := player.Snapshot{Time: serverTime, Position: p.Data.Position, PupilDistDir01: p.Data.PupilDistDir01}
+					playersToUpdate[id] = snapshot
+
+					{
+						s := msgfromserver.UpdateSelf{LastAuthorizedInputId: p.LastAuthorizedInputId, Snapshot: snapshot}
+						bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdateSelf), s)
+						netServer.SendTo(id, bytes, false)
+					}
+				}
+				if len(playersToUpdate) == 0 {
+					return
+				}
 				s := msgfromserver.UpdatePlayers{IdsToSnapshots: playersToUpdate}
 				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdatePlayers), s)
 				netServer.SendToAll(bytes, false)

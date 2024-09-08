@@ -5,6 +5,7 @@ import (
 )
 
 type Snapshot struct {
-	Time     float64
-	Position vec2.Vec2
+	Time           float64
+	Position       vec2.Vec2
+	PupilDistDir01 vec2.Vec2
 }

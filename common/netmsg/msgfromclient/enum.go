@@ -7,4 +7,5 @@ const (
 	MsgTypeConnectMe
 	MsgTypeInput
 	MsgTypeTimeRequest
+	MsgTypeUpdateFacingDirection
 )

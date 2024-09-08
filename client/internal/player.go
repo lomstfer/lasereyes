@@ -33,8 +33,7 @@ func drawPlayerPupil(data player.CommonData, screen *ebiten.Image, pupilImage *e
 	colorScale.ScaleWithColor(data.Color)
 
 	pupilPosCentered := data.Position.Sub(vec2.NewVec2Both(constants.PupilSize / 2.0))
-	facingScaled := data.FacingTowardsRelative.Div(100).LengthClamped(0, 1)
-	pos := pupilPosCentered.Add(facingScaled.Mul(constants.PupilMaxDistanceFromEye))
+	pos := pupilPosCentered.Add(data.PupilDistDir01.Mul(constants.PupilMaxDistanceFromEye))
 	geo.Translate(pos.X, pos.Y)
 
 	screen.DrawImage(pupilImage, &ebiten.DrawImageOptions{GeoM: geo, ColorScale: colorScale})
@@ -95,16 +94,17 @@ func (p *Player) LerpBetweenSnapshots(syncedServerTime float64) {
 
 	s0 := p.SnapshotsForInterp[0]
 	s1 := p.SnapshotsForInterp[1]
-	p0 := s0.Position
-	p1 := s1.Position
 	t0 := s0.Time
 	t1 := s1.Time
-
-	// if inBetween := t0 <= renderingTime && renderingTime <= t1; !inBetween {
-	// 	return
-	// }
-
 	t := (renderingTime - t0) / (t1 - t0)
-
-	p.Data.Position = vec2.Lerp(p0, p1, t)
+	{
+		p0 := s0.Position
+		p1 := s1.Position
+		p.Data.Position = vec2.Lerp(p0, p1, t)
+	}
+	{
+		d0 := s0.PupilDistDir01
+		d1 := s1.PupilDistDir01
+		p.Data.PupilDistDir01 = vec2.Lerp(d0, d1, t)
+	}
 }

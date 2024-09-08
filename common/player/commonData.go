@@ -6,11 +6,11 @@ import (
 )
 
 type CommonData struct {
-	Id                    uint
-	Name                  string
-	Position              vec2.Vec2
-	Health                float32
-	Dead                  bool
-	FacingTowardsRelative vec2.Vec2
-	Color                 color.NRGBA
+	Id             uint
+	Name           string
+	Position       vec2.Vec2
+	Health         float32
+	Dead           bool
+	PupilDistDir01 vec2.Vec2
+	Color          color.NRGBA
 }

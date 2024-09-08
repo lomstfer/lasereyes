@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"wzrds/client/internal/constants"
 	"wzrds/common/commonconstants"
 	"wzrds/common/pkg/vec2"
 	"wzrds/common/player"
@@ -25,7 +26,8 @@ func NewSelfPlayer(data player.CommonData) *SelfPlayer {
 }
 
 func (sp *SelfPlayer) CalculateFacingVec(mousePosition vec2.Vec2) {
-	sp.Data.FacingTowardsRelative = mousePosition.Sub(sp.RenderPosition.Add(vec2.NewVec2Both(commonconstants.PlayerSize / 2.0)))
+	rel := mousePosition.Sub(sp.RenderPosition)
+	sp.Data.PupilDistDir01 = rel.Div(constants.MouseDistanceFromPupilForMax).LengthClamped(0, 1)
 }
 
 func (sp *SelfPlayer) CheckMoveInput(inputVec vec2.Vec2) {

@@ -21,6 +21,9 @@ type Input struct {
 	Shoot ShootInput
 	Move  MoveInput
 }
+type UpdateFacingDirection struct {
+	Dir vec2.Vec2
+}
 
 type TimeRequest struct {
 	TimeSent float64

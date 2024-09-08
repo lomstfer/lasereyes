@@ -167,20 +167,27 @@ func (a *App) UpdateSelfPlayer(mousePosition vec2.Vec2) {
 	})
 
 	a.sendInputCallback.Update(func() {
-		if a.selfPlayer.Data.Dead {
-			return
+		{
+			packetStruct := msgfromclient.UpdateFacingDirection{Dir: a.selfPlayer.Data.PupilDistDir01}
+			bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeUpdateFacingDirection), packetStruct)
+			a.netClient.SendToServer(bytes, false)
 		}
-		move := msgfromclient.MoveInput{MoveInputs: a.selfPlayer.InputsToSend}
-		shoot := msgfromclient.ShootInput{Time: a.timeSyncer.ServerTime()}
-		if a.bufferedShootInput != nil {
-			shoot.DidShoot = true
-			shoot.Position = *a.bufferedShootInput
+		{
+			if len(a.selfPlayer.InputsToSend) == 0 && a.bufferedShootInput == nil {
+				return
+			}
+			move := msgfromclient.MoveInput{MoveInputs: a.selfPlayer.InputsToSend}
+			shoot := msgfromclient.ShootInput{Time: a.timeSyncer.ServerTime()}
+			if a.bufferedShootInput != nil {
+				shoot.DidShoot = true
+				shoot.Position = *a.bufferedShootInput
+			}
+			a.bufferedShootInput = nil
+			packetStruct := msgfromclient.Input{Move: move, Shoot: shoot}
+			bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeInput), packetStruct)
+			a.netClient.SendToServer(bytes, true)
+			a.selfPlayer.OnSendInputs()
 		}
-		a.bufferedShootInput = nil
-		packetStruct := msgfromclient.Input{Move: move, Shoot: shoot}
-		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeInput), packetStruct)
-		a.netClient.SendToServer(bytes, true)
-		a.selfPlayer.OnSendInputs()
 	})
 
 	a.selfPlayer.UpdateRenderPosition(a.getInputCallback.Accumulator / a.getInputCallback.DeltaSeconds)
