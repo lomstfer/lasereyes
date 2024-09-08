@@ -54,6 +54,8 @@ type App struct {
 	backgroundImage *ebiten.Image
 
 	bufferedShootInput *vec2.Vec2
+
+	mousePositionLastSendDirection vec2.Vec2
 }
 
 func NewApp(assetFS embed.FS) *App {
@@ -168,9 +170,12 @@ func (a *App) UpdateSelfPlayer(mousePosition vec2.Vec2) {
 
 	a.sendInputCallback.Update(func() {
 		{
-			packetStruct := msgfromclient.UpdateFacingDirection{Dir: a.selfPlayer.Data.PupilDistDir01}
-			bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeUpdateFacingDirection), packetStruct)
-			a.netClient.SendToServer(bytes, false)
+			if a.mousePositionLastSendDirection != mousePosition {
+				packetStruct := msgfromclient.UpdateFacingDirection{Dir: a.selfPlayer.Data.PupilDistDir01}
+				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeUpdateFacingDirection), packetStruct)
+				a.netClient.SendToServer(bytes, false)
+			}
+			a.mousePositionLastSendDirection = mousePosition
 		}
 		{
 			if len(a.selfPlayer.InputsToSend) == 0 && a.bufferedShootInput == nil {

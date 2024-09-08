@@ -129,23 +129,23 @@ func main() {
 			})
 
 			broadcastGameFallbackCallback.Update(func() {
-				playersToUpdate := make(map[uint]player.Snapshot, 0)
-				for id, p := range gameServer.Players {
-					snapshot := player.Snapshot{Time: serverTime, Position: p.Data.Position, PupilDistDir01: p.Data.PupilDistDir01}
-					playersToUpdate[id] = snapshot
+				// playersToUpdate := make(map[uint]player.Snapshot, 0)
+				// for id, p := range gameServer.Players {
+				// 	snapshot := player.Snapshot{Time: serverTime, Position: p.Data.Position, PupilDistDir01: p.Data.PupilDistDir01}
+				// 	playersToUpdate[id] = snapshot
 
-					{
-						s := msgfromserver.UpdateSelf{LastAuthorizedInputId: p.LastAuthorizedInputId, Snapshot: snapshot}
-						bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdateSelf), s)
-						netServer.SendTo(id, bytes, false)
-					}
-				}
-				if len(playersToUpdate) == 0 {
-					return
-				}
-				s := msgfromserver.UpdatePlayers{IdsToSnapshots: playersToUpdate}
-				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdatePlayers), s)
-				netServer.SendToAll(bytes, false)
+				// 	{
+				// 		s := msgfromserver.UpdateSelf{LastAuthorizedInputId: p.LastAuthorizedInputId, Snapshot: snapshot}
+				// 		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdateSelf), s)
+				// 		netServer.SendTo(id, bytes, false)
+				// 	}
+				// }
+				// if len(playersToUpdate) == 0 {
+				// 	return
+				// }
+				// s := msgfromserver.UpdatePlayers{IdsToSnapshots: playersToUpdate}
+				// bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypeUpdatePlayers), s)
+				// netServer.SendToAll(bytes, false)
 			})
 
 			time.Sleep(time.Millisecond * 1)

@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
@@ -73,6 +74,7 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 			return s
 		case byte(msgfromserver.MsgTypeUpdatePlayers):
 			s := netmsg.GetStructFromBytes[msgfromserver.UpdatePlayers](bytes)
+			fmt.Println("u", time.Now())
 			return s
 		case byte(msgfromserver.MsgTypeUpdateSelf):
 			s := netmsg.GetStructFromBytes[msgfromserver.UpdateSelf](bytes)

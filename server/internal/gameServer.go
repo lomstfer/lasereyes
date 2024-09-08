@@ -38,8 +38,10 @@ func (gs *GameServer) RemovePlayer(id uint) {
 }
 
 func (gs *GameServer) HandlePlayerUpdateFacingDir(playerId uint, dir vec2.Vec2) {
-	gs.Players[playerId].Data.PupilDistDir01 = dir
-	gs.PlayersThatMoved[playerId] = true
+	if gs.Players[playerId].Data.PupilDistDir01 != dir {
+		gs.Players[playerId].Data.PupilDistDir01 = dir
+		gs.PlayersThatMoved[playerId] = true
+	}
 }
 
 func (gs *GameServer) HandlePlayerInput(playerId uint, serverTimeNow float64, input msgfromclient.Input) *PlayerInputOutcome {

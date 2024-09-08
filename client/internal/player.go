@@ -78,9 +78,9 @@ func (p *Player) LerpBetweenSnapshots(syncedServerTime float64) {
 
 	if len(p.SnapshotsForInterp) < 2 {
 		// avoids jump when the player just starts moving
-		// if len(p.SnapshotsForInterp) == 1 {
-		// 	p.SnapshotsForInterp[0].Time = renderingTime
-		// }
+		if len(p.SnapshotsForInterp) == 1 {
+			p.SnapshotsForInterp[0].Time = renderingTime
+		}
 		return
 	}
 
