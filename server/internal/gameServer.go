@@ -132,7 +132,6 @@ func (gs *GameServer) Simulate(deltaTime float64, serverTime float64) {
 			p.LastAuthorizedInputId = input.Input.Id
 			p.QueuedInputs = p.QueuedInputs[1:]
 			gs.PlayersThatMoved[p.Data.Id] = true
-
 		}
 	}
 }

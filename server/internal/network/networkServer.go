@@ -46,6 +46,8 @@ func (ns *NetworkServer) CheckForEvents() (uint, interface{}) {
 		peer := event.GetPeer()
 		id := commonutils.ByteArrayToUint(peer.GetData())
 		peer.SetData(nil)
+		delete(ns.enetPeers, id)
+
 		fmt.Println("disconnected id:", id)
 		return id, ClientDisconnected{}
 
