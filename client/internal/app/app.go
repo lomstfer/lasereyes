@@ -56,6 +56,9 @@ type App struct {
 	bufferedShootInput *vec2.Vec2
 
 	mousePositionLastSendDirection vec2.Vec2
+
+	laserBeams     []internal.LaserBeam
+	laserBeamImage *ebiten.Image
 }
 
 func NewApp(assetFS embed.FS) *App {
@@ -75,7 +78,10 @@ func NewApp(assetFS embed.FS) *App {
 	app.playerHealthBarBgImage = ebiten.NewImage(1, 1)
 	app.playerHealthBarBgImage.Fill(color.NRGBA{255, 255, 255, 255})
 	app.playerHealthBarFgImage = ebiten.NewImage(1, 1)
-	app.playerHealthBarFgImage.Fill(color.NRGBA{255, 0, 0, 255})
+	app.playerHealthBarFgImage.Fill(color.NRGBA{0, 255, 0, 255})
+
+	app.laserBeamImage = ebiten.NewImage(1, 1)
+	app.laserBeamImage.Fill(color.NRGBA{255, 255, 255, 255})
 
 	{
 		bgImg := ebiten.NewImage(30, 30)
@@ -136,6 +142,14 @@ func (a *App) Update(screen *ebiten.Image) {
 	for _, p := range a.otherPlayers {
 		p.LerpBetweenSnapshots(a.timeSyncer.ServerTime())
 	}
+
+	laserBeamsLeft := make([]internal.LaserBeam, 0)
+	for _, lb := range a.laserBeams {
+		if a.time-lb.TimeInstantiated < constants.LaserBeamViewTime {
+			laserBeamsLeft = append(laserBeamsLeft, lb)
+		}
+	}
+	a.laserBeams = laserBeamsLeft
 
 	a.draw(screen)
 }
@@ -269,6 +283,8 @@ func (a *App) handleNetworkEvents() {
 		if pd.Health <= 0 {
 			pd.Dead = true
 		}
+
+		a.laserBeams = append(a.laserBeams, internal.LaserBeam{TargetPosition: pd.Position, TimeInstantiated: a.time, OwnerId: msg.CausingDamageId})
 	}
 }
 
@@ -291,6 +307,19 @@ func (a *App) draw(screen *ebiten.Image) {
 	selfDataToRender := a.selfPlayer.Data
 	selfDataToRender.Position = a.selfPlayer.RenderPosition
 	internal.DrawPlayer(selfDataToRender, screen, a.playerEyeImage, a.playerPupilImage)
+
+	for _, lb := range a.laserBeams {
+		var ownerData player.CommonData
+		if lb.OwnerId == a.selfPlayer.Data.Id {
+			ownerData = selfDataToRender
+		} else {
+			p := a.otherPlayers[lb.OwnerId]
+			if p != nil {
+				ownerData = p.Data
+			}
+		}
+		lb.Draw(screen, internal.GetPupilPos(ownerData), a.laserBeamImage, a.time)
+	}
 
 	// ui stuff
 

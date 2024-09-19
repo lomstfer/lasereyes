@@ -9,6 +9,7 @@ type Player struct {
 	QueuedInputs          []InputServerSide
 	LastAuthorizedInputId uint32
 	HistoryForRewind      []player.Snapshot
+	TimeOfLastShot        float64
 }
 
 type InputServerSide struct {

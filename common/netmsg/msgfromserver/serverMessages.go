@@ -38,6 +38,7 @@ type TimeAnswer struct {
 }
 
 type PlayerTakeDamage struct {
-	PlayerId uint
-	Damage   float32
+	PlayerId        uint
+	Damage          float32
+	CausingDamageId uint
 }

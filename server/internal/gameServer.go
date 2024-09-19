@@ -59,9 +59,12 @@ func (gs *GameServer) HandlePlayerInput(playerId uint, serverTimeNow float64, in
 	// 	return p.QueuedInputs[i].Id < p.QueuedInputs[j].Id
 	// })
 
-	if !input.Shoot.DidShoot {
+	if !input.Shoot.DidShoot || serverTimeNow-p.TimeOfLastShot < constants.ShootCooldown {
 		return nil
 	}
+
+	p.TimeOfLastShot = serverTimeNow
+
 	playerPositionCopy := p.Data.Position
 	for _, i := range input.Move.MoveInputs {
 		if i.HasInput() {

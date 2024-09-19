@@ -80,7 +80,7 @@ func main() {
 				inputOutcome := gameServer.HandlePlayerInput(eventPeerId, serverTime, msg)
 				if inputOutcome != nil && inputOutcome.SomeoneWasShot {
 					for _, id := range inputOutcome.WereShotIds {
-						packetStruct := msgfromserver.PlayerTakeDamage{PlayerId: id, Damage: constants.Damage}
+						packetStruct := msgfromserver.PlayerTakeDamage{PlayerId: id, Damage: constants.Damage, CausingDamageId: inputOutcome.ShooterId}
 						packetBytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromserver.MsgTypePlayerTakeDamage), packetStruct)
 						netServer.SendToAll(packetBytes, true)
 					}

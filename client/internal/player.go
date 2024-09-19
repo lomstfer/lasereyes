@@ -27,14 +27,19 @@ func DrawPlayer(data player.CommonData, screen *ebiten.Image, eyeImage *ebiten.I
 	drawPlayerPupil(data, screen, pupilImage, colorScale)
 }
 
+func GetPupilPos(data player.CommonData) vec2.Vec2 {
+	pos := data.Position.Add(data.PupilDistDir01.Mul(constants.PupilMaxDistanceFromEye))
+	return pos
+}
+
 func drawPlayerPupil(data player.CommonData, screen *ebiten.Image, pupilImage *ebiten.Image, colorScale ebiten.ColorScale) {
 	geo := ebiten.GeoM{}
 	geo.Scale(commonconstants.PixelScale, commonconstants.PixelScale)
 	colorScale.ScaleWithColor(data.Color)
 
-	pupilPosCentered := data.Position.Sub(vec2.NewVec2Both(constants.PupilSize / 2.0))
-	pos := pupilPosCentered.Add(data.PupilDistDir01.Mul(constants.PupilMaxDistanceFromEye))
-	geo.Translate(pos.X, pos.Y)
+	drawPos := GetPupilPos(data).Sub(vec2.NewVec2Both(constants.PupilSize / 2.0))
+
+	geo.Translate(drawPos.X, drawPos.Y)
 
 	screen.DrawImage(pupilImage, &ebiten.DrawImageOptions{GeoM: geo, ColorScale: colorScale})
 }
@@ -88,7 +93,9 @@ func (p *Player) LerpBetweenSnapshots(syncedServerTime float64) {
 	for len(p.SnapshotsForInterp) >= 2 && p.SnapshotsForInterp[1].Time < renderingTime {
 		p.SnapshotsForInterp = p.SnapshotsForInterp[1:]
 	}
-	if len(p.SnapshotsForInterp) < 2 {
+	if len(p.SnapshotsForInterp) > 0 && renderingTime > p.SnapshotsForInterp[len(p.SnapshotsForInterp)-1].Time {
+		p.Data.Position = p.SnapshotsForInterp[0].Position
+		p.Data.PupilDistDir01 = p.SnapshotsForInterp[0].PupilDistDir01
 		return
 	}
 
