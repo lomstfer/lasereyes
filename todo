@@ -1,5 +1,6 @@
-no specific order
-* shoot cooldown
+* client side prediction of shooting (have ids on shoot/damage packets and confirm them)
 * objects that block shooting
-* shoot effects
-* client side prediction of shooting (have ids on shoot/damage packets)
+* shoot/hit effects
+* leaderboard
+* names
+* moving camera

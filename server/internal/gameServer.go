@@ -59,7 +59,7 @@ func (gs *GameServer) HandlePlayerInput(playerId uint, serverTimeNow float64, in
 	// 	return p.QueuedInputs[i].Id < p.QueuedInputs[j].Id
 	// })
 
-	if !input.Shoot.DidShoot || serverTimeNow-p.TimeOfLastShot < constants.ShootCooldown {
+	if !input.Shoot.DidShoot || serverTimeNow-p.TimeOfLastShot < commonconstants.ShootCooldown {
 		return nil
 	}
 

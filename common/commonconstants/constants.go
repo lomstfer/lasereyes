@@ -5,3 +5,4 @@ const SimulationTickRate = 1.0 / 60.0
 const PixelScale = 5
 const PlayerSize = PixelScale * 9
 const PlayerSpeed = 200
+const ShootCooldown = 0.5

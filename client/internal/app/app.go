@@ -57,8 +57,9 @@ type App struct {
 
 	mousePositionLastSendDirection vec2.Vec2
 
-	laserBeams     []internal.LaserBeam
-	laserBeamImage *ebiten.Image
+	laserBeams                         []internal.LaserBeam
+	laserBeamImage                     *ebiten.Image
+	timeOfLastSuccessfulPredictionShot float64
 }
 
 func NewApp(assetFS embed.FS) *App {
@@ -200,6 +201,7 @@ func (a *App) UpdateSelfPlayer(mousePosition vec2.Vec2) {
 			if a.bufferedShootInput != nil {
 				shoot.DidShoot = true
 				shoot.Position = *a.bufferedShootInput
+				a.shootPrediction(shoot.Position)
 			}
 			a.bufferedShootInput = nil
 			packetStruct := msgfromclient.Input{Move: move, Shoot: shoot}
@@ -214,15 +216,31 @@ func (a *App) UpdateSelfPlayer(mousePosition vec2.Vec2) {
 	a.selfPlayer.CalculateFacingVec(mousePosition)
 }
 
-func (g *App) loadAssets(assetFS embed.FS) {
+func (a *App) shootPrediction(shootPosition vec2.Vec2) {
+	if a.time-a.timeOfLastSuccessfulPredictionShot < commonconstants.ShootCooldown {
+		return
+	}
+
+	for _, oP := range a.otherPlayers {
+		pRectMin := oP.Data.Position.Sub(vec2.NewVec2Both(commonconstants.PlayerSize / 2.0))
+		pRectMax := oP.Data.Position.Add(vec2.NewVec2Both(commonconstants.PlayerSize / 2.0))
+		if shootPosition.X >= pRectMin.X && shootPosition.X <= pRectMax.X &&
+			shootPosition.Y >= pRectMin.Y && shootPosition.Y <= pRectMax.Y {
+			a.laserBeams = append(a.laserBeams, internal.LaserBeam{TargetPosition: oP.Data.Position, TimeInstantiated: a.time, OwnerId: a.selfPlayer.Data.Id})
+			a.timeOfLastSuccessfulPredictionShot = a.time
+		}
+	}
+}
+
+func (a *App) loadAssets(assetFS embed.FS) {
 	fontBytes, err := assetFS.ReadFile("embed_assets/Roboto-Regular.ttf")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	g.fontFace = utils.GetFontFace(fontBytes)
+	a.fontFace = utils.GetFontFace(fontBytes)
 
-	g.finishedAssetLoading = true
+	a.finishedAssetLoading = true
 }
 
 func (g *App) syncTime() {
@@ -283,8 +301,9 @@ func (a *App) handleNetworkEvents() {
 		if pd.Health <= 0 {
 			pd.Dead = true
 		}
-
-		a.laserBeams = append(a.laserBeams, internal.LaserBeam{TargetPosition: pd.Position, TimeInstantiated: a.time, OwnerId: msg.CausingDamageId})
+		if msg.CausingDamageId != a.selfPlayer.Data.Id {
+			a.laserBeams = append(a.laserBeams, internal.LaserBeam{TargetPosition: pd.Position, TimeInstantiated: a.time, OwnerId: msg.CausingDamageId})
+		}
 	}
 }
 
