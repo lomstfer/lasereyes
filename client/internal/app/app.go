@@ -44,12 +44,20 @@ type App struct {
 	getInputCallback  *common.FixedCallback
 	sendInputCallback *common.FixedCallback
 
+	mousePositionScreen vec2.Vec2
+	mousePositionWorld  vec2.Vec2
+
+	cameraTopLeftPos     vec2.Vec2
+	cameraTopLeftPosInit bool
+
 	selfPlayer             *internal.SelfPlayer
 	otherPlayers           map[uint]*internal.Player
 	playerEyeImage         *ebiten.Image
 	playerHealthBarBgImage *ebiten.Image
 	playerHealthBarFgImage *ebiten.Image
 	playerPupilImage       *ebiten.Image
+
+	gridShader *ebiten.Shader
 
 	backgroundImage *ebiten.Image
 
@@ -80,6 +88,13 @@ func NewApp(assetFS embed.FS) *App {
 	app.playerHealthBarBgImage.Fill(color.NRGBA{255, 255, 255, 255})
 	app.playerHealthBarFgImage = ebiten.NewImage(1, 1)
 	app.playerHealthBarFgImage.Fill(color.NRGBA{0, 255, 0, 255})
+
+	var err error
+	app.gridShader, err = ebiten.NewShader(utils.LoadBytesInFs(assetFS, "embed_assets/gridShader.kage"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	app.laserBeamImage = ebiten.NewImage(1, 1)
 	app.laserBeamImage.Fill(color.NRGBA{255, 255, 255, 255})
@@ -128,17 +143,19 @@ func (a *App) Update(screen *ebiten.Image) {
 
 	a.time = commonutils.GetUnixTimeAsFloat() - a.startTime
 	localTime := commonutils.GetUnixTimeAsFloat()
-	// dt := timeNow - g.lastUpdateTime
+	dt := localTime - a.lastUpdateLocalTime
 	a.lastUpdateLocalTime = localTime
 
-	var mousePosition vec2.Vec2
 	{
 		mx, my := ebiten.CursorPosition()
-		mousePosition = vec2.Vec2{X: float64(mx), Y: float64(my)}
+		a.mousePositionScreen = vec2.Vec2{X: float64(mx), Y: float64(my)}
+		a.mousePositionWorld = a.mousePositionScreen.Add(a.cameraTopLeftPos)
 	}
 
 	if a.selfPlayer != nil {
-		a.UpdateSelfPlayer(mousePosition)
+		a.UpdateSelfPlayer()
+		cameraTowards := vec2.NewVec2(a.selfPlayer.SmoothedPosition.X-float64(screen.Bounds().Dx())/2, a.selfPlayer.SmoothedPosition.Y-float64(screen.Bounds().Dy())/2)
+		a.cameraTopLeftPos = moveCameraTowardsSmoothly(a.cameraTopLeftPos, cameraTowards, constants.CameraSpeed, dt)
 	}
 	for _, p := range a.otherPlayers {
 		p.LerpBetweenSnapshots(a.timeSyncer.ServerTime())
@@ -155,13 +172,13 @@ func (a *App) Update(screen *ebiten.Image) {
 	a.draw(screen)
 }
 
-func (a *App) UpdateSelfPlayer(mousePosition vec2.Vec2) {
+func (a *App) UpdateSelfPlayer() {
 	if a.selfPlayer.Data.Dead {
 		return
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButton0) && a.bufferedShootInput == nil {
-		a.bufferedShootInput = &vec2.Vec2{X: mousePosition.X, Y: mousePosition.Y}
+		a.bufferedShootInput = &vec2.Vec2{X: a.mousePositionWorld.X, Y: a.mousePositionWorld.Y}
 	}
 
 	a.getInputCallback.Update(func() {
@@ -185,12 +202,12 @@ func (a *App) UpdateSelfPlayer(mousePosition vec2.Vec2) {
 
 	a.sendInputCallback.Update(func() {
 		{
-			if a.mousePositionLastSendDirection != mousePosition {
+			if a.mousePositionLastSendDirection != a.mousePositionWorld {
 				packetStruct := msgfromclient.UpdateFacingDirection{Dir: a.selfPlayer.Data.PupilDistDir01}
 				bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeUpdateFacingDirection), packetStruct)
 				a.netClient.SendToServer(bytes, false)
 			}
-			a.mousePositionLastSendDirection = mousePosition
+			a.mousePositionLastSendDirection = a.mousePositionWorld
 		}
 		{
 			if len(a.selfPlayer.InputsToSend) == 0 && a.bufferedShootInput == nil {
@@ -211,9 +228,9 @@ func (a *App) UpdateSelfPlayer(mousePosition vec2.Vec2) {
 		}
 	})
 
-	a.selfPlayer.UpdateRenderPosition(a.getInputCallback.Accumulator / a.getInputCallback.DeltaSeconds)
+	a.selfPlayer.UpdateSmoothPosition(a.getInputCallback.Accumulator / a.getInputCallback.DeltaSeconds)
 
-	a.selfPlayer.CalculateFacingVec(mousePosition)
+	a.selfPlayer.CalculateFacingVec(a.mousePositionWorld)
 }
 
 func (a *App) shootPrediction(shootPosition vec2.Vec2) {
@@ -314,18 +331,23 @@ func (a *App) draw(screen *ebiten.Image) {
 		return
 	}
 
+	if !a.cameraTopLeftPosInit {
+		a.cameraTopLeftPos = vec2.NewVec2(-float64(screen.Bounds().Dx())/2, -float64(screen.Bounds().Dy())/2)
+		a.cameraTopLeftPosInit = true
+	}
+
 	{
 		geo := ebiten.GeoM{}
 		geo.Scale(float64(screen.Bounds().Dx())/float64(a.backgroundImage.Bounds().Dx()), float64(screen.Bounds().Dy())/float64(a.backgroundImage.Bounds().Dy()))
-		screen.DrawImage(a.backgroundImage, &ebiten.DrawImageOptions{GeoM: geo})
+		a.drawBgGrid(screen)
 	}
 
 	for _, p := range a.otherPlayers {
-		internal.DrawPlayer(p.Data, screen, a.playerEyeImage, a.playerPupilImage)
+		internal.DrawPlayer(p.Data, screen, a.playerEyeImage, a.playerPupilImage, a.cameraTopLeftPos)
 	}
 	selfDataToRender := a.selfPlayer.Data
-	selfDataToRender.Position = a.selfPlayer.RenderPosition
-	internal.DrawPlayer(selfDataToRender, screen, a.playerEyeImage, a.playerPupilImage)
+	selfDataToRender.Position = a.selfPlayer.SmoothedPosition
+	internal.DrawPlayer(selfDataToRender, screen, a.playerEyeImage, a.playerPupilImage, a.cameraTopLeftPos)
 
 	for _, lb := range a.laserBeams {
 		var ownerData player.CommonData
@@ -337,13 +359,28 @@ func (a *App) draw(screen *ebiten.Image) {
 				ownerData = p.Data
 			}
 		}
-		lb.Draw(screen, internal.GetPupilPos(ownerData), a.laserBeamImage, a.time)
+		lb.Draw(screen, internal.GetPupilPos(ownerData), a.laserBeamImage, a.time, a.cameraTopLeftPos)
 	}
 
 	// ui stuff
 
 	for _, p := range a.otherPlayers {
-		internal.DrawPlayerHealthBar(p.Data, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage)
+		internal.DrawPlayerHealthBar(p.Data, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage, a.cameraTopLeftPos)
 	}
-	internal.DrawPlayerHealthBar(selfDataToRender, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage)
+	internal.DrawPlayerHealthBar(selfDataToRender, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage, a.cameraTopLeftPos)
+}
+
+func (a *App) drawBgGrid(screen *ebiten.Image) {
+	opts := ebiten.DrawRectShaderOptions{}
+	opts.Uniforms = make(map[string]any, 2)
+	opts.Uniforms["CameraTopLeft"] = []float32{
+		float32(a.cameraTopLeftPos.X),
+		float32(a.cameraTopLeftPos.Y),
+	}
+	screen.DrawRectShader(screen.Bounds().Dx(), screen.Bounds().Dy(), a.gridShader, &opts)
+}
+
+func moveCameraTowardsSmoothly(cameraPos vec2.Vec2, towards vec2.Vec2, step float64, deltaTime float64) vec2.Vec2 {
+	diff := towards.Sub(cameraPos)
+	return cameraPos.Add(diff.Mul(step).Mul(deltaTime))
 }

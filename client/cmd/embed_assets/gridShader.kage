@@ -1,0 +1,15 @@
+//kage:unit pixels
+package main
+
+var CameraTopLeft vec2
+
+func Fragment(targetCoords vec4, sourceCoords vec2, color vec4) vec4 {
+	const CellSize = 32
+
+	cellCoords := floor((targetCoords.xy + CameraTopLeft)/CellSize) 
+	if mod(cellCoords.x + cellCoords.y, 2) == 0 {
+		return vec4(0.2, 0.2, 0.3, 1) // magenta
+	} else {
+		return vec4(0.1, 0.1, 0.15, 1) // black
+	}
+}

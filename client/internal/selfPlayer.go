@@ -11,7 +11,7 @@ type SelfPlayer struct {
 	Data               player.CommonData
 	InputsToSend       []player.MoveInput
 	OldPosition        vec2.Vec2
-	RenderPosition     vec2.Vec2
+	SmoothedPosition   vec2.Vec2
 	unauthorizedInputs []player.MoveInput
 	inputIdCounter     uint32
 }
@@ -19,14 +19,14 @@ type SelfPlayer struct {
 func NewSelfPlayer(data player.CommonData) *SelfPlayer {
 	sp := &SelfPlayer{Data: data}
 	sp.OldPosition = sp.Data.Position
-	sp.RenderPosition = sp.Data.Position
+	sp.SmoothedPosition = sp.Data.Position
 	sp.InputsToSend = make([]player.MoveInput, 0)
 	sp.unauthorizedInputs = make([]player.MoveInput, 0)
 	return sp
 }
 
-func (sp *SelfPlayer) CalculateFacingVec(mousePosition vec2.Vec2) {
-	rel := mousePosition.Sub(sp.RenderPosition)
+func (sp *SelfPlayer) CalculateFacingVec(mousePositionWorld vec2.Vec2) {
+	rel := mousePositionWorld.Sub(sp.SmoothedPosition)
 	sp.Data.PupilDistDir01 = rel.Div(constants.MouseDistanceFromPupilForMax).LengthClamped(0, 1)
 }
 
@@ -80,9 +80,9 @@ func (sp *SelfPlayer) HandleServerUpdate(lastAuthorizedInputId uint32, snapshot 
 
 }
 
-func (sp *SelfPlayer) UpdateRenderPosition(alpha float64) {
+func (sp *SelfPlayer) UpdateSmoothPosition(alpha float64) {
 	p0 := sp.OldPosition
 	p1 := sp.Data.Position
 	// todo: check if delta position is greater than movement and snap if so
-	sp.RenderPosition = vec2.Lerp(p0, p1, alpha)
+	sp.SmoothedPosition = vec2.Lerp(p0, p1, alpha)
 }

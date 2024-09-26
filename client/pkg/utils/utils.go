@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	_ "image/png"
+	"io"
 	"os"
 
 	"golang.org/x/image/font"
@@ -43,6 +44,23 @@ func LoadImageInFs(fs embed.FS, filePath string) *image.Image {
 	}
 
 	return &img
+}
+
+func LoadBytesInFs(fs embed.FS, filePath string) []byte {
+	file, err := fs.Open(filePath)
+	if err != nil {
+		fmt.Println("failed to open file, error:", err)
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		fmt.Println("failed to read file, error:", err)
+		os.Exit(1)
+	}
+
+	return data
 }
 
 func GetFontFace(ttf []byte) *font.Face {

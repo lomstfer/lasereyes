@@ -12,6 +12,7 @@ import (
 //go:embed embed_assets/Roboto-Regular.ttf
 //go:embed embed_assets/eye.png
 //go:embed embed_assets/pupil.png
+//go:embed embed_assets/gridShader.kage
 var assetFS embed.FS
 
 func main() {
