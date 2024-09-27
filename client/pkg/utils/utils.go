@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
 	"image"
@@ -8,8 +9,7 @@ import (
 	"io"
 	"os"
 
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 func LoadImage(filePath string) *image.Image {
@@ -63,25 +63,11 @@ func LoadBytesInFs(fs embed.FS, filePath string) []byte {
 	return data
 }
 
-func GetFontFace(ttf []byte) *font.Face {
-	var mplusNormalFont font.Face
-
-	tt, err := opentype.Parse(ttf)
+func GetTextFace(ttf []byte) *text.GoTextFaceSource {
+	s, err := text.NewGoTextFaceSource(bytes.NewReader(ttf))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	const dpi = 72
-	mplusNormalFont, err = opentype.NewFace(tt, &opentype.FaceOptions{
-		Size:    24,
-		DPI:     dpi,
-		Hinting: font.HintingFull,
-	})
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	return &mplusNormalFont
+	return s
 }

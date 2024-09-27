@@ -1,6 +1,7 @@
-* client side prediction of shooting (have ids on shoot/damage packets and confirm them)
-* objects that block shooting
-* shoot/hit effects
+* objects that block moving and shooting 
+* effects
 * leaderboard
-* names
-* moving camera
+
+* items that spawn (health boost)
+
+(* client side prediction of health removal (have ids on shoot/damage packets and confirm them))

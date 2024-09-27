@@ -9,9 +9,10 @@ import (
 	"wzrds/common/player"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
-func DrawPlayer(data player.CommonData, screen *ebiten.Image, eyeImage *ebiten.Image, pupilImage *ebiten.Image, cameraPos vec2.Vec2) {
+func DrawPlayer(data player.CommonData, screen *ebiten.Image, eyeImage *ebiten.Image, pupilImage *ebiten.Image, cameraTranslation vec2.Vec2) {
 	geo := ebiten.GeoM{}
 	geo.Scale(commonconstants.PixelScale, commonconstants.PixelScale)
 
@@ -22,10 +23,10 @@ func DrawPlayer(data player.CommonData, screen *ebiten.Image, eyeImage *ebiten.I
 	if data.Dead {
 		colorScale.ScaleWithColor(color.NRGBA{150, 100, 0, 255})
 	}
-	geo.Translate(-cameraPos.X, -cameraPos.Y)
+	geo.Translate(cameraTranslation.X, cameraTranslation.Y)
 	screen.DrawImage(eyeImage, &ebiten.DrawImageOptions{GeoM: geo, ColorScale: colorScale})
 
-	drawPlayerPupil(data, screen, pupilImage, colorScale, cameraPos)
+	drawPlayerPupil(data, screen, pupilImage, colorScale, cameraTranslation)
 }
 
 func GetPupilPos(data player.CommonData) vec2.Vec2 {
@@ -33,7 +34,7 @@ func GetPupilPos(data player.CommonData) vec2.Vec2 {
 	return pos
 }
 
-func drawPlayerPupil(data player.CommonData, screen *ebiten.Image, pupilImage *ebiten.Image, colorScale ebiten.ColorScale, cameraPos vec2.Vec2) {
+func drawPlayerPupil(data player.CommonData, screen *ebiten.Image, pupilImage *ebiten.Image, colorScale ebiten.ColorScale, cameraTranslation vec2.Vec2) {
 	geo := ebiten.GeoM{}
 	geo.Scale(commonconstants.PixelScale, commonconstants.PixelScale)
 	colorScale.ScaleWithColor(data.Color)
@@ -41,12 +42,12 @@ func drawPlayerPupil(data player.CommonData, screen *ebiten.Image, pupilImage *e
 	drawPos := GetPupilPos(data).Sub(vec2.NewVec2Both(constants.PupilSize / 2.0))
 
 	geo.Translate(drawPos.X, drawPos.Y)
-	geo.Translate(-cameraPos.X, -cameraPos.Y)
+	geo.Translate(cameraTranslation.X, cameraTranslation.Y)
 
 	screen.DrawImage(pupilImage, &ebiten.DrawImageOptions{GeoM: geo, ColorScale: colorScale})
 }
 
-func DrawPlayerHealthBar(data player.CommonData, screen *ebiten.Image, healthBarBg *ebiten.Image, healthBarFg *ebiten.Image, cameraPos vec2.Vec2) {
+func DrawPlayerHealthBar(data player.CommonData, screen *ebiten.Image, healthBarBg *ebiten.Image, healthBarFg *ebiten.Image, cameraTranslation vec2.Vec2) {
 	width := 60
 	height := 5
 	x := data.Position.X - float64(width)/2
@@ -55,7 +56,7 @@ func DrawPlayerHealthBar(data player.CommonData, screen *ebiten.Image, healthBar
 		geo := ebiten.GeoM{}
 		geo.Scale(float64(width), float64(height))
 		geo.Translate(x, y)
-		geo.Translate(-cameraPos.X, -cameraPos.Y)
+		geo.Translate(cameraTranslation.X, cameraTranslation.Y)
 		screen.DrawImage(healthBarBg, &ebiten.DrawImageOptions{GeoM: geo})
 	}
 	{
@@ -68,9 +69,19 @@ func DrawPlayerHealthBar(data player.CommonData, screen *ebiten.Image, healthBar
 		}
 		geo.Scale(healthFraction*float64(width), float64(height))
 		geo.Translate(x, y)
-		geo.Translate(-cameraPos.X, -cameraPos.Y)
+		geo.Translate(cameraTranslation.X, cameraTranslation.Y)
 		screen.DrawImage(healthBarFg, &ebiten.DrawImageOptions{GeoM: geo})
 	}
+}
+
+func DrawPlayerName(data player.CommonData, screen *ebiten.Image, f *text.GoTextFace, cameraTranslation vec2.Vec2) {
+	textToDraw := data.Name
+	width, _ := text.Measure(textToDraw, f, 0)
+	geo := ebiten.GeoM{}
+	geo.Translate(data.Position.X, data.Position.Y)
+	geo.Translate(-width/2, commonconstants.PlayerSize/2)
+	geo.Translate(cameraTranslation.X, cameraTranslation.Y)
+	text.Draw(screen, textToDraw, f, &text.DrawOptions{DrawImageOptions: ebiten.DrawImageOptions{GeoM: geo}})
 }
 
 type Player struct {

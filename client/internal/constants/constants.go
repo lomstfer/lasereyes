@@ -16,3 +16,6 @@ const MouseDistanceFromPupilForMax = 50
 const LaserBeamViewTime = 0.2
 
 const CameraSpeed = 5
+
+const VirtualScreenWidth = 800
+const VirtualScreenHeight = 800

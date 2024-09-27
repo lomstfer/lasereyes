@@ -15,7 +15,7 @@ type LaserBeam struct {
 	TargetPosition   vec2.Vec2
 }
 
-func (lb *LaserBeam) Draw(screen *ebiten.Image, ownerPosition vec2.Vec2, laserBeamImage *ebiten.Image, timeNow float64, cameraPos vec2.Vec2) {
+func (lb *LaserBeam) Draw(screen *ebiten.Image, ownerPosition vec2.Vec2, laserBeamImage *ebiten.Image, timeNow float64, cameraTranslation vec2.Vec2) {
 	size := 3.0
 	{
 		diff := lb.TargetPosition.Sub(ownerPosition)
@@ -29,7 +29,7 @@ func (lb *LaserBeam) Draw(screen *ebiten.Image, ownerPosition vec2.Vec2, laserBe
 			geo.Translate(ownerPosition.X+size/2.0*math.Sin(angle), ownerPosition.Y-size/2.0*math.Cos(angle))
 			cs := ebiten.ColorScale{}
 			cs.ScaleWithColor(color.NRGBA{255, 0, 0, 255})
-			geo.Translate(-cameraPos.X, -cameraPos.Y)
+			geo.Translate(cameraTranslation.X, cameraTranslation.Y)
 			screen.DrawImage(laserBeamImage, &ebiten.DrawImageOptions{GeoM: geo, ColorScale: cs})
 		}
 	}

@@ -21,15 +21,14 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	"github.com/hajimehoshi/ebiten/v2/text"
-	"golang.org/x/image/font"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 type App struct {
 	startTime           float64
 	time                float64
 	lastUpdateLocalTime float64
-	fontFace            *font.Face
+	textFace            *text.GoTextFaceSource
 
 	finishedAssetLoading bool
 
@@ -58,8 +57,6 @@ type App struct {
 	playerPupilImage       *ebiten.Image
 
 	gridShader *ebiten.Shader
-
-	backgroundImage *ebiten.Image
 
 	bufferedShootInput *vec2.Vec2
 
@@ -98,23 +95,6 @@ func NewApp(assetFS embed.FS) *App {
 
 	app.laserBeamImage = ebiten.NewImage(1, 1)
 	app.laserBeamImage.Fill(color.NRGBA{255, 255, 255, 255})
-
-	{
-		bgImg := ebiten.NewImage(30, 30)
-		dark := true
-		for y := range bgImg.Bounds().Dy() {
-			for x := range bgImg.Bounds().Dx() {
-				if dark {
-					bgImg.Set(x, y, color.NRGBA{20, 20, 20, 255})
-				} else {
-					bgImg.Set(x, y, color.NRGBA{60, 60, 60, 255})
-				}
-				dark = !dark
-			}
-			dark = !dark
-		}
-		app.backgroundImage = bgImg
-	}
 
 	app.netClient = network.NewNetworkClient()
 
@@ -255,7 +235,7 @@ func (a *App) loadAssets(assetFS embed.FS) {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	a.fontFace = utils.GetFontFace(fontBytes)
+	a.textFace = utils.GetTextFace(fontBytes)
 
 	a.finishedAssetLoading = true
 }
@@ -327,7 +307,14 @@ func (a *App) handleNetworkEvents() {
 func (a *App) draw(screen *ebiten.Image) {
 	if !a.finishedAssetLoading || !a.timeSyncer.FinishedSync {
 		screen.Fill(color.NRGBA{100, 100, 100, 255})
-		text.Draw(screen, "connecting", *a.fontFace, 0, 24, color.NRGBA{255, 255, 255, 255})
+		f := &text.GoTextFace{
+			Source: a.textFace,
+			Size:   100,
+		}
+		width, _ := text.Measure("connecting", f, 0)
+		geo := ebiten.GeoM{}
+		geo.Translate(float64(screen.Bounds().Dx())/2-width/2, 100)
+		text.Draw(screen, "connecting", f, &text.DrawOptions{DrawImageOptions: ebiten.DrawImageOptions{GeoM: geo}})
 		return
 	}
 
@@ -336,18 +323,16 @@ func (a *App) draw(screen *ebiten.Image) {
 		a.cameraTopLeftPosInit = true
 	}
 
-	{
-		geo := ebiten.GeoM{}
-		geo.Scale(float64(screen.Bounds().Dx())/float64(a.backgroundImage.Bounds().Dx()), float64(screen.Bounds().Dy())/float64(a.backgroundImage.Bounds().Dy()))
-		a.drawBgGrid(screen)
-	}
+	a.drawBgGrid(screen)
+
+	cameraTranslation := getCameraTranslation(a.cameraTopLeftPos)
 
 	for _, p := range a.otherPlayers {
-		internal.DrawPlayer(p.Data, screen, a.playerEyeImage, a.playerPupilImage, a.cameraTopLeftPos)
+		internal.DrawPlayer(p.Data, screen, a.playerEyeImage, a.playerPupilImage, cameraTranslation)
 	}
 	selfDataToRender := a.selfPlayer.Data
 	selfDataToRender.Position = a.selfPlayer.SmoothedPosition
-	internal.DrawPlayer(selfDataToRender, screen, a.playerEyeImage, a.playerPupilImage, a.cameraTopLeftPos)
+	internal.DrawPlayer(selfDataToRender, screen, a.playerEyeImage, a.playerPupilImage, cameraTranslation)
 
 	for _, lb := range a.laserBeams {
 		var ownerData player.CommonData
@@ -359,15 +344,21 @@ func (a *App) draw(screen *ebiten.Image) {
 				ownerData = p.Data
 			}
 		}
-		lb.Draw(screen, internal.GetPupilPos(ownerData), a.laserBeamImage, a.time, a.cameraTopLeftPos)
+		lb.Draw(screen, internal.GetPupilPos(ownerData), a.laserBeamImage, a.time, cameraTranslation)
 	}
 
 	// ui stuff
 
-	for _, p := range a.otherPlayers {
-		internal.DrawPlayerHealthBar(p.Data, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage, a.cameraTopLeftPos)
+	playerNameTextFace := &text.GoTextFace{
+		Source: a.textFace,
+		Size:   20,
 	}
-	internal.DrawPlayerHealthBar(selfDataToRender, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage, a.cameraTopLeftPos)
+	for _, p := range a.otherPlayers {
+		internal.DrawPlayerHealthBar(p.Data, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage, cameraTranslation)
+		internal.DrawPlayerName(p.Data, screen, playerNameTextFace, cameraTranslation)
+	}
+	internal.DrawPlayerHealthBar(selfDataToRender, screen, a.playerHealthBarBgImage, a.playerHealthBarFgImage, cameraTranslation)
+	internal.DrawPlayerName(selfDataToRender, screen, playerNameTextFace, cameraTranslation)
 }
 
 func (a *App) drawBgGrid(screen *ebiten.Image) {
@@ -383,4 +374,8 @@ func (a *App) drawBgGrid(screen *ebiten.Image) {
 func moveCameraTowardsSmoothly(cameraPos vec2.Vec2, towards vec2.Vec2, step float64, deltaTime float64) vec2.Vec2 {
 	diff := towards.Sub(cameraPos)
 	return cameraPos.Add(diff.Mul(step).Mul(deltaTime))
+}
+
+func getCameraTranslation(cameraTopLeftPosition vec2.Vec2) vec2.Vec2 {
+	return cameraTopLeftPosition.Mul(-1)
 }
