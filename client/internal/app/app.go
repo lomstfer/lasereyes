@@ -62,9 +62,8 @@ type App struct {
 
 	mousePositionLastSendDirection vec2.Vec2
 
-	laserBeams                         []internal.LaserBeam
-	laserBeamImage                     *ebiten.Image
-	timeOfLastSuccessfulPredictionShot float64
+	laserBeams     []internal.LaserBeam
+	laserBeamImage *ebiten.Image
 }
 
 func NewApp(assetFS embed.FS) *App {
@@ -198,7 +197,6 @@ func (a *App) UpdateSelfPlayer() {
 			if a.bufferedShootInput != nil {
 				shoot.DidShoot = true
 				shoot.Position = *a.bufferedShootInput
-				a.shootPrediction(shoot.Position)
 			}
 			a.bufferedShootInput = nil
 			packetStruct := msgfromclient.Input{Move: move, Shoot: shoot}
@@ -211,22 +209,6 @@ func (a *App) UpdateSelfPlayer() {
 	a.selfPlayer.UpdateSmoothPosition(a.getInputCallback.Accumulator / a.getInputCallback.DeltaSeconds)
 
 	a.selfPlayer.CalculateFacingVec(a.mousePositionWorld)
-}
-
-func (a *App) shootPrediction(shootPosition vec2.Vec2) {
-	if a.time-a.timeOfLastSuccessfulPredictionShot < commonconstants.ShootCooldown {
-		return
-	}
-
-	for _, oP := range a.otherPlayers {
-		pRectMin := oP.Data.Position.Sub(vec2.NewVec2Both(commonconstants.PlayerSize / 2.0))
-		pRectMax := oP.Data.Position.Add(vec2.NewVec2Both(commonconstants.PlayerSize / 2.0))
-		if shootPosition.X >= pRectMin.X && shootPosition.X <= pRectMax.X &&
-			shootPosition.Y >= pRectMin.Y && shootPosition.Y <= pRectMax.Y {
-			a.laserBeams = append(a.laserBeams, internal.LaserBeam{TargetPosition: oP.Data.Position, TimeInstantiated: a.time, OwnerId: a.selfPlayer.Data.Id})
-			a.timeOfLastSuccessfulPredictionShot = a.time
-		}
-	}
 }
 
 func (a *App) loadAssets(assetFS embed.FS) {
@@ -298,9 +280,7 @@ func (a *App) handleNetworkEvents() {
 		if pd.Health <= 0 {
 			pd.Dead = true
 		}
-		if msg.CausingDamageId != a.selfPlayer.Data.Id {
-			a.laserBeams = append(a.laserBeams, internal.LaserBeam{TargetPosition: pd.Position, TimeInstantiated: a.time, OwnerId: msg.CausingDamageId})
-		}
+		a.laserBeams = append(a.laserBeams, internal.LaserBeam{TargetPosition: pd.Position, TimeInstantiated: a.time, OwnerId: msg.CausingDamageId})
 	}
 }
 

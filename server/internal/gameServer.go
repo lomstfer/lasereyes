@@ -73,7 +73,9 @@ func (gs *GameServer) HandlePlayerInput(playerId uint, serverTimeNow float64, in
 	}
 	// playerPositionCopy is now what the client saw
 
-	// todo: check radius from shoot position to client player
+	if p.Data.Position.Sub(input.Shoot.Position).LengthSquared() > commonconstants.ShootRange*commonconstants.ShootRange {
+		return nil
+	}
 
 	outcome := &PlayerInputOutcome{
 		ShooterId:   playerId,
