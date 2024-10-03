@@ -3,9 +3,9 @@ package network
 import (
 	"fmt"
 	"os"
+	"wzrds/common/netmsg/msgfromclient"
 
 	"wzrds/common/netmsg"
-	"wzrds/common/netmsg/msgfromclient"
 	"wzrds/common/netmsg/msgfromserver"
 
 	"github.com/codecat/go-enet"
@@ -43,9 +43,6 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 	switch event.GetType() {
 	case enet.EventConnect:
 		fmt.Println("connected")
-		s := msgfromclient.ConnectMe{Name: "peter"}
-		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeConnectMe), s)
-		nc.SendToServer(bytes, true)
 		return Connected{}
 
 	case enet.EventDisconnect:
@@ -105,4 +102,10 @@ func (nc *NetworkClient) StartDisconnect() {
 func (nc *NetworkClient) CleanUp() {
 	nc.enetClientHost.Destroy()
 	enet.Deinitialize()
+}
+
+func (nc *NetworkClient) SendConnectMe(selfName string) {
+	s := msgfromclient.ConnectMe{Name: selfName}
+	bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeConnectMe), s)
+	nc.SendToServer(bytes, true)
 }

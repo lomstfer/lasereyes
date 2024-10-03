@@ -7,3 +7,4 @@ const PlayerSize = PixelScale * 9
 const PlayerSpeed = 200
 const ShootCooldown = 0.5
 const ShootRange = 300
+const MaxNameLength = 15

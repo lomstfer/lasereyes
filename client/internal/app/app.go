@@ -56,6 +56,8 @@ type App struct {
 	playerHealthBarFgImage *ebiten.Image
 	playerPupilImage       *ebiten.Image
 
+	caretImage *ebiten.Image
+
 	gridShader *ebiten.Shader
 
 	bufferedShootInput *vec2.Vec2
@@ -64,6 +66,9 @@ type App struct {
 
 	laserBeams     []internal.LaserBeam
 	laserBeamImage *ebiten.Image
+
+	enteredName bool
+	nameInput   []rune
 }
 
 func NewApp(assetFS embed.FS) *App {
@@ -85,6 +90,9 @@ func NewApp(assetFS embed.FS) *App {
 	app.playerHealthBarFgImage = ebiten.NewImage(1, 1)
 	app.playerHealthBarFgImage.Fill(color.NRGBA{G: 255, A: 255})
 
+	app.caretImage = ebiten.NewImage(1, 1)
+	app.caretImage.Fill(color.NRGBA{R: 255, G: 255, B: 255, A: 255})
+
 	var err error
 	app.gridShader, err = ebiten.NewShader(utils.LoadBytesInFs(assetFS, "embed_assets/gridShader.kage"))
 	if err != nil {
@@ -94,6 +102,8 @@ func NewApp(assetFS embed.FS) *App {
 
 	app.laserBeamImage = ebiten.NewImage(1, 1)
 	app.laserBeamImage.Fill(color.NRGBA{R: 255, G: 255, B: 255, A: 255})
+
+	app.nameInput = make([]rune, 0)
 
 	app.netClient = network.NewNetworkClient()
 
@@ -304,6 +314,58 @@ func (a *App) draw(screen *ebiten.Image) {
 		geo := ebiten.GeoM{}
 		geo.Translate(float64(screen.Bounds().Dx())/2-width/2, 100)
 		text.Draw(screen, "connecting", f, &text.DrawOptions{DrawImageOptions: ebiten.DrawImageOptions{GeoM: geo}})
+
+		return
+	}
+
+	if !a.enteredName {
+		screen.Fill(color.NRGBA{R: 100, G: 100, B: 100, A: 255})
+		{
+			f := &text.GoTextFace{
+				Source: a.textFace,
+				Size:   100,
+			}
+			width, _ := text.Measure("type your name", f, 0)
+			geo := ebiten.GeoM{}
+			geo.Translate(float64(screen.Bounds().Dx())/2-width/2, 100)
+
+			text.Draw(screen, "type your name", f, &text.DrawOptions{DrawImageOptions: ebiten.DrawImageOptions{GeoM: geo}})
+		}
+		a.nameInput = ebiten.AppendInputChars(a.nameInput)
+		if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) && len(a.nameInput) > 0 {
+			a.nameInput = a.nameInput[:len(a.nameInput)-1]
+		}
+		if len(a.nameInput) > commonconstants.MaxNameLength {
+			a.nameInput = a.nameInput[:commonconstants.MaxNameLength]
+		}
+		{
+			nameInputStr := string(a.nameInput)
+			f := &text.GoTextFace{
+				Source: a.textFace,
+				Size:   70,
+			}
+			width, height := text.Measure(nameInputStr, f, 0)
+			geo := ebiten.GeoM{}
+			geo.Translate(float64(screen.Bounds().Dx())/2-width/2, 300)
+
+			text.Draw(screen, nameInputStr, f, &text.DrawOptions{DrawImageOptions: ebiten.DrawImageOptions{GeoM: geo}})
+
+			if int(a.time*2)%2 == 0 {
+				geoCaret := ebiten.GeoM{}
+				geoCaret.Scale(5, 60)
+				geoCaret.Translate(float64(screen.Bounds().Dx())/2+width/2+10, 300+height/2-30)
+				screen.DrawImage(a.caretImage, &ebiten.DrawImageOptions{GeoM: geoCaret})
+			}
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+			a.netClient.SendConnectMe(string(a.nameInput))
+			a.enteredName = true
+		}
+		return
+	}
+
+	if a.selfPlayer == nil {
+		screen.Fill(color.NRGBA{R: 100, G: 100, B: 100, A: 255})
 		return
 	}
 
