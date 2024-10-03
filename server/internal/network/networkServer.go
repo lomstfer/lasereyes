@@ -21,6 +21,7 @@ func NewNetworkServer() *NetworkServer {
 	ns := &NetworkServer{}
 
 	var err error
+<<<<<<< HEAD
 
 	port := uint16(5005)
 
@@ -38,6 +39,9 @@ func NewNetworkServer() *NetworkServer {
 	}
 
 	ns.enetServerHost, err = enet.NewHost(enet.NewListenAddress(port), 32, 1, 0, 0)
+=======
+	ns.enetServerHost, err = enet.NewHost(enet.NewListenAddress(5005), 32, 1, 0, 0)
+>>>>>>> b53fc98f772f7b9cccc62013e8daad43dd9f9f74
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

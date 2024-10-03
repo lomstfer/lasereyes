@@ -3,8 +3,11 @@ package network
 import (
 	"fmt"
 	"os"
+<<<<<<< HEAD
 	"strconv"
 	"strings"
+=======
+>>>>>>> b53fc98f772f7b9cccc62013e8daad43dd9f9f74
 	"wzrds/common/netmsg/msgfromclient"
 
 	"wzrds/common/netmsg"
@@ -31,6 +34,7 @@ func NewNetworkClient() *NetworkClient {
 		os.Exit(1)
 	}
 
+<<<<<<< HEAD
 	ipFile, err := os.ReadFile("custom_server_info.txt")
 
 	defaultIpStr := "127.0.0.1"
@@ -56,6 +60,9 @@ func NewNetworkClient() *NetworkClient {
 	}
 
 	nc.enetServerPeer, err = nc.enetClientHost.Connect(enet.NewAddress(ipStr, port), 1, 0)
+=======
+	nc.enetServerPeer, err = nc.enetClientHost.Connect(enet.NewAddress("127.0.0.1", 5005), 1, 0)
+>>>>>>> b53fc98f772f7b9cccc62013e8daad43dd9f9f74
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -69,7 +76,11 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 
 	switch event.GetType() {
 	case enet.EventConnect:
+<<<<<<< HEAD
 		nc.Connected = true
+=======
+		fmt.Println("connected")
+>>>>>>> b53fc98f772f7b9cccc62013e8daad43dd9f9f74
 		return Connected{}
 
 	case enet.EventDisconnect:
