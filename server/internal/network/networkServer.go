@@ -3,6 +3,7 @@ package network
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"wzrds/common/commonutils"
 	"wzrds/common/netmsg"
 	"wzrds/common/netmsg/msgfromclient"
@@ -20,7 +21,23 @@ func NewNetworkServer() *NetworkServer {
 	ns := &NetworkServer{}
 
 	var err error
-	ns.enetServerHost, err = enet.NewHost(enet.NewListenAddress(5005), 32, 1, 0, 0)
+
+	port := uint16(5005)
+
+	portFile, err := os.ReadFile("server_config.txt")
+	if err != nil {
+		fmt.Println("Error loading server_config.txt. Using default port value: 5005.")
+		os.Exit(1)
+	}
+	port64, err := strconv.ParseUint(string(portFile), 10, 16)
+	if err != nil {
+		fmt.Println("Error loading server_config.txt content. Using default port value: 5005.")
+		os.Exit(1)
+	} else {
+		port = uint16(port64)
+	}
+
+	ns.enetServerHost, err = enet.NewHost(enet.NewListenAddress(port), 32, 1, 0, 0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

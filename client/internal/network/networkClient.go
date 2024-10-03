@@ -3,6 +3,8 @@ package network
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"wzrds/common/netmsg/msgfromclient"
 
 	"wzrds/common/netmsg"
@@ -14,6 +16,7 @@ import (
 type NetworkClient struct {
 	enetClientHost enet.Host
 	enetServerPeer enet.Peer
+	Connected      bool
 }
 
 func NewNetworkClient() *NetworkClient {
@@ -28,7 +31,31 @@ func NewNetworkClient() *NetworkClient {
 		os.Exit(1)
 	}
 
-	nc.enetServerPeer, err = nc.enetClientHost.Connect(enet.NewAddress("127.0.0.1", 5005), 1, 0)
+	ipFile, err := os.ReadFile("custom_server_info.txt")
+
+	defaultIpStr := "127.0.0.1"
+	defaultPort := uint16(5005)
+	ipStr := defaultIpStr
+	port := defaultPort
+
+	if err != nil {
+		fmt.Println("Did not find custom_server_info.txt, connects to the default ip: 127.0.0.1:5005")
+	} else if len(ipFile) != 0 {
+		fileInput := strings.Split(string(ipFile), ":")
+		if len(fileInput) != 2 {
+			fmt.Println("Error loading custom_server_info.txt data, ip and port should be in the format of ip:port. Connects to the default ip: 127.0.0.1:5005")
+		} else {
+			ipStr = fileInput[0]
+			port64, err := strconv.ParseUint(fileInput[1], 10, 16)
+			if err != nil {
+				fmt.Println("Error loading custom_server_info.txt data, ip and port should be in the format of ip:port. Connects to the default ip: 127.0.0.1:5005")
+				os.Exit(1)
+			}
+			port = uint16(port64)
+		}
+	}
+
+	nc.enetServerPeer, err = nc.enetClientHost.Connect(enet.NewAddress(ipStr, port), 1, 0)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -42,11 +69,11 @@ func (nc *NetworkClient) CheckForEvents() interface{} {
 
 	switch event.GetType() {
 	case enet.EventConnect:
-		fmt.Println("connected")
+		nc.Connected = true
 		return Connected{}
 
 	case enet.EventDisconnect:
-		fmt.Println("disconnected", event.GetPeer())
+		nc.Connected = false
 		return Disconnected{}
 
 	case enet.EventReceive:

@@ -117,6 +117,10 @@ func (a *App) UpdateClose() bool {
 		a.onCloseInput()
 	}
 
+	if ebiten.IsWindowBeingClosed() && !a.netClient.Connected {
+		return true
+	}
+
 	if a.startedClosingProcedure {
 		if a.cleanClose || time.Since(a.timeOfCloseInput).Seconds() > constants.WaitForCleanCloseTime {
 			a.netClient.CleanUp()
@@ -242,6 +246,9 @@ func (a *App) syncTime() {
 }
 
 func (a *App) getPlayerDataFromId(id uint) *player.CommonData {
+	if a.selfPlayer == nil {
+		return nil
+	}
 	if id == a.selfPlayer.Data.Id {
 		return &a.selfPlayer.Data
 	}
@@ -278,10 +285,13 @@ func (a *App) handleNetworkEvents() {
 
 	case msgfromserver.UpdatePlayers:
 		for id, snapshot := range msg.IdsToSnapshots {
-			if id == a.selfPlayer.Data.Id {
+			if a.selfPlayer != nil && id == a.selfPlayer.Data.Id {
 				continue
 			}
-			a.otherPlayers[id].SnapshotsForInterp = append(a.otherPlayers[id].SnapshotsForInterp, snapshot)
+			p := a.otherPlayers[id]
+			if p != nil {
+				p.SnapshotsForInterp = append(a.otherPlayers[id].SnapshotsForInterp, snapshot)
+			}
 		}
 
 	case msgfromserver.UpdateSelf:
