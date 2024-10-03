@@ -33,8 +33,8 @@ type EbitenGame struct {
 }
 
 func (eg *EbitenGame) Update() error {
-	close := eg.app.UpdateClose()
-	if close {
+	updateClose := eg.app.UpdateClose()
+	if updateClose {
 		return errors.New("window closed")
 	}
 	return nil
@@ -44,6 +44,6 @@ func (eg *EbitenGame) Draw(screen *ebiten.Image) {
 	eg.app.Update(screen)
 }
 
-func (g *EbitenGame) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
+func (eg *EbitenGame) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return 800, 800
 }

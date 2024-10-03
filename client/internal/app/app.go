@@ -232,7 +232,7 @@ func (a *App) syncTime() {
 }
 
 func (a *App) getPlayerDataFromId(id uint) *player.CommonData {
-	if id == a.selfPlayer.id {
+	if id == a.selfPlayer.Data.Id {
 		return &a.selfPlayer.Data
 	}
 	p := a.otherPlayers[id]
@@ -325,10 +325,10 @@ func (a *App) draw(screen *ebiten.Image) {
 
 	for _, lb := range a.laserBeams {
 		ownerData, targetData := a.getPlayerDataFromId(lb.OwnerId), a.getPlayerDataFromId(lb.TargetId)
-		if ownerData | == nil {
+		if ownerData == nil || targetData == nil {
 			break
 		}
-		lb.Draw(screen, internal.GetPupilPos(*ownerData), , a.laserBeamImage, a.time, cameraTranslation)
+		lb.Draw(screen, internal.GetPupilPos(*ownerData), internal.GetPupilPos(*targetData), a.laserBeamImage, a.time, cameraTranslation)
 	}
 
 	// ui stuff

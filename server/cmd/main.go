@@ -33,6 +33,8 @@ func main() {
 
 	startedTime := commonutils.GetUnixTimeAsFloat()
 
+	fmt.Println("server running")
+
 	go func() {
 		for {
 			serverTime := commonutils.GetUnixTimeAsFloat() - startedTime
@@ -44,7 +46,7 @@ func main() {
 					Name:   msg.Name,
 					Id:     eventPeerId,
 					Health: 100,
-					Color:  color.NRGBA{uint8(rand.Intn(128) + 129), uint8(rand.Intn(128) + 129), uint8(rand.Intn(128) + 129), 255},
+					Color:  color.NRGBA{R: uint8(rand.Intn(128) + 129), G: uint8(rand.Intn(128) + 129), B: uint8(rand.Intn(128) + 129), A: 255},
 				}
 
 				// add new player to new player
