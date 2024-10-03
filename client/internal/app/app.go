@@ -81,9 +81,9 @@ func NewApp(assetFS embed.FS) *App {
 	app.playerPupilImage = ebiten.NewImageFromImage(*utils.LoadImageInFs(assetFS, "embed_assets/pupil.png"))
 
 	app.playerHealthBarBgImage = ebiten.NewImage(1, 1)
-	app.playerHealthBarBgImage.Fill(color.NRGBA{255, 255, 255, 255})
+	app.playerHealthBarBgImage.Fill(color.NRGBA{R: 255, G: 255, B: 255, A: 255})
 	app.playerHealthBarFgImage = ebiten.NewImage(1, 1)
-	app.playerHealthBarFgImage.Fill(color.NRGBA{0, 255, 0, 255})
+	app.playerHealthBarFgImage.Fill(color.NRGBA{G: 255, A: 255})
 
 	var err error
 	app.gridShader, err = ebiten.NewShader(utils.LoadBytesInFs(assetFS, "embed_assets/gridShader.kage"))
@@ -93,7 +93,7 @@ func NewApp(assetFS embed.FS) *App {
 	}
 
 	app.laserBeamImage = ebiten.NewImage(1, 1)
-	app.laserBeamImage.Fill(color.NRGBA{255, 255, 255, 255})
+	app.laserBeamImage.Fill(color.NRGBA{R: 255, G: 255, B: 255, A: 255})
 
 	app.netClient = network.NewNetworkClient()
 
@@ -222,19 +222,30 @@ func (a *App) loadAssets(assetFS embed.FS) {
 	a.finishedAssetLoading = true
 }
 
-func (g *App) syncTime() {
-	for !g.timeSyncer.FinishedSync {
+func (a *App) syncTime() {
+	for !a.timeSyncer.FinishedSync {
 		request := msgfromclient.TimeRequest{TimeSent: commonutils.GetUnixTimeAsFloat()}
 		bytes := netmsg.GetBytesFromIdAndStruct(byte(msgfromclient.MsgTypeTimeRequest), request)
-		g.netClient.SendToServer(bytes, false)
+		a.netClient.SendToServer(bytes, false)
 		time.Sleep(time.Millisecond * constants.ServerTimeSyncDeltaMS)
 	}
 }
 
-func (g *App) onCloseInput() {
-	g.startedClosingProcedure = true
-	g.timeOfCloseInput = time.Now()
-	g.netClient.StartDisconnect()
+func (a *App) getPlayerDataFromId(id uint) *player.CommonData {
+	if id == a.selfPlayer.id {
+		return &a.selfPlayer.Data
+	}
+	p := a.otherPlayers[id]
+	if p != nil {
+		return &p.Data
+	}
+	return nil
+}
+
+func (a *App) onCloseInput() {
+	a.startedClosingProcedure = true
+	a.timeOfCloseInput = time.Now()
+	a.netClient.StartDisconnect()
 }
 
 func (a *App) handleNetworkEvents() {
@@ -270,23 +281,21 @@ func (a *App) handleNetworkEvents() {
 		a.timeSyncer.OnTimeAnswer(commonutils.GetUnixTimeAsFloat(), msg.Request.TimeSent, msg.TimeReceived)
 
 	case msgfromserver.PlayerTakeDamage:
-		var pd *player.CommonData
-		if msg.PlayerId == a.selfPlayer.Data.Id {
-			pd = &a.selfPlayer.Data
-		} else {
-			pd = &a.otherPlayers[msg.PlayerId].Data
+		pd := a.getPlayerDataFromId(msg.PlayerId)
+		if pd == nil {
+			break
 		}
 		pd.Health -= msg.Damage
 		if pd.Health <= 0 {
 			pd.Dead = true
 		}
-		a.laserBeams = append(a.laserBeams, internal.LaserBeam{TargetPosition: pd.Position, TimeInstantiated: a.time, OwnerId: msg.CausingDamageId})
+		a.laserBeams = append(a.laserBeams, internal.LaserBeam{TargetId: pd.Id, TimeInstantiated: a.time, OwnerId: msg.CausingDamageId})
 	}
 }
 
 func (a *App) draw(screen *ebiten.Image) {
 	if !a.finishedAssetLoading || !a.timeSyncer.FinishedSync {
-		screen.Fill(color.NRGBA{100, 100, 100, 255})
+		screen.Fill(color.NRGBA{R: 100, G: 100, B: 100, A: 255})
 		f := &text.GoTextFace{
 			Source: a.textFace,
 			Size:   100,
@@ -315,16 +324,11 @@ func (a *App) draw(screen *ebiten.Image) {
 	internal.DrawPlayer(selfDataToRender, screen, a.playerEyeImage, a.playerPupilImage, cameraTranslation)
 
 	for _, lb := range a.laserBeams {
-		var ownerData player.CommonData
-		if lb.OwnerId == a.selfPlayer.Data.Id {
-			ownerData = selfDataToRender
-		} else {
-			p := a.otherPlayers[lb.OwnerId]
-			if p != nil {
-				ownerData = p.Data
-			}
+		ownerData, targetData := a.getPlayerDataFromId(lb.OwnerId), a.getPlayerDataFromId(lb.TargetId)
+		if ownerData | == nil {
+			break
 		}
-		lb.Draw(screen, internal.GetPupilPos(ownerData), a.laserBeamImage, a.time, cameraTranslation)
+		lb.Draw(screen, internal.GetPupilPos(*ownerData), , a.laserBeamImage, a.time, cameraTranslation)
 	}
 
 	// ui stuff
