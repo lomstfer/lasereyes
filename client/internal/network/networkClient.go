@@ -53,6 +53,8 @@ func NewNetworkClient() *NetworkClient {
 				port = uint16(port64)
 			}
 		}
+	} else {
+		fmt.Println("Error loading custom_server_info.txt data, ip and port should be in the format of ip:port. Connects to the default ip: 127.0.0.1:5005")
 	}
 
 	nc.enetServerPeer, err = nc.enetClientHost.Connect(enet.NewAddress(ipStr, port), 1, 0)
